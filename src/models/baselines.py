@@ -18,10 +18,10 @@ import numpy as np
 import pandas as pd
 import torch
 from sklearn.linear_model import Ridge
-from torch.utils.data import DataLoader
 
-from src.data.dataset import build_datasets
-from src.utils import get_logger, load_config, per_patient_metrics, set_seed, summarize_patients
+from src.data.dataset import build_datasets, collect_arrays
+from src.evaluate import write_comparison, write_coverage, write_fingerprint
+from src.utils import get_logger, load_config, per_patient_metrics, set_seed
 
 log = get_logger(__name__)
 
@@ -72,14 +72,6 @@ class RidgeRegression:
         return torch.from_numpy(pred.astype(np.float32)).unsqueeze(1)
 
 
-def collect(ds) -> tuple[torch.Tensor, torch.Tensor, np.ndarray, np.ndarray]:
-    """Whole dataset -> (x, y, patient ids, target timestamps ns)."""
-    xs, ys, ps, ts = [], [], [], []
-    for x, y, meta in DataLoader(ds, batch_size=8192):
-        xs.append(x), ys.append(y), ps.append(meta["patient"].numpy()), ts.append(meta["target_ts"].numpy())
-    return torch.cat(xs), torch.cat(ys), np.concatenate(ps), np.concatenate(ts)
-
-
 def _rmse_mgdl(model, x, y, scaler) -> float:
     err = scaler.unscale_glucose(model(x).numpy()) - scaler.unscale_glucose(y.numpy())
     return float(np.sqrt(np.mean(err**2)))
@@ -90,10 +82,11 @@ def run_horizon(cfg: dict, horizon: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     cfg = copy.deepcopy(cfg)
     cfg["window"]["horizon"] = horizon
     train, val, test, scaler = build_datasets(cfg)
-    xtr, ytr, _, _ = collect(train)
-    xva, yva, _, _ = collect(val)
-    xte, yte, pte, _ = collect(test)
+    xtr, ytr, _, _ = collect_arrays(train)
+    xva, yva, _, _ = collect_arrays(val)
+    xte, yte, pte, tte = collect_arrays(test)
     minutes = horizon * cfg["grid"]["step_min"]
+    write_fingerprint(cfg, minutes, pte, tte)  # lets every later model prove it uses these exact windows
 
     # Hyperparameters are chosen on validation only; test is touched once, afterwards.
     val_rows = []
@@ -138,18 +131,14 @@ def main() -> None:
         per_patient.append(p), validation.append(v)
     per_patient, validation = pd.concat(per_patient, ignore_index=True), pd.concat(validation, ignore_index=True)
 
-    summary = pd.DataFrame(
-        [
-            {"model": m, "horizon_min": h, "n_patients": len(g), **summarize_patients(g), "published_bglp_rmse": ""}
-            for (m, h), g in per_patient.groupby(["model", "horizon_min"], sort=False)
-        ]
-    )
     out = Path(cfg["paths"]["results_dir"])
     out.mkdir(parents=True, exist_ok=True)
     per_patient.to_csv(out / "baselines_per_patient.csv", index=False)
-    summary.to_csv(out / "baselines_summary.csv", index=False)
     validation.to_csv(out / "baselines_validation.csv", index=False)
-    log.info("wrote baselines_{per_patient,summary,validation}.csv to %s", out)
+    write_coverage(cfg, HORIZONS)
+    summary = write_comparison(cfg)
+    log.info("wrote baselines_per_patient, baselines_validation, test_coverage, comparison_* to %s", out)
+    print(summary[["cohort", "horizon_min", "model", "n_patients", "rmse_mean", "rmse_std"]].round(2).to_string(index=False))
 
 
 if __name__ == "__main__":

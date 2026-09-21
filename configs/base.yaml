@@ -7,6 +7,7 @@ paths:
   data_root: data/raw
   processed_dir: data/processed   # cached grids; patient data, gitignored
   results_dir: results            # aggregate metrics and figures only
+  checkpoint_dir: checkpoints     # model weights + the training-fit scaler, gitignored
 
 cohorts:
   "2018": [559, 563, 570, 575, 588, 591]

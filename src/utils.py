@@ -8,9 +8,13 @@ import yaml
 
 
 def load_config(path: str | Path) -> dict:
-    """Read a YAML config file into a dict."""
+    """Read a YAML config into a dict. A ``base: <file>`` key (path relative to this config)
+    is loaded first and the file's own keys are deep-merged over it."""
+    path = Path(path)
     with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+    base = cfg.pop("base", None)
+    return _deep_merge(load_config(path.parent / base), cfg) if base else cfg
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -75,3 +79,10 @@ def summarize_patients(table):
         "mae_mean": table["mae"].mean(),
         "mae_std": table["mae"].std(ddof=1),
     }
+
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    out = dict(base)
+    for k, v in override.items():
+        out[k] = _deep_merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out

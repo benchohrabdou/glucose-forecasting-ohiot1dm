@@ -202,9 +202,31 @@ class GlucoseWindowDataset(Dataset):
         return x, y, meta
 
 
-def build_datasets(cfg: dict, patients: list[int] | None = None):
-    """(train, val, test datasets, scaler). Scaler is fit on training segments only; window
-    counts are persisted to ``<results_dir>/window_counts.csv``."""
+def collect_arrays(ds: Dataset, batch_size: int = 8192) -> tuple[torch.Tensor, torch.Tensor, np.ndarray, np.ndarray]:
+    """Whole dataset -> (x, y, patient ids, target timestamps in ns), in dataset order."""
+    from torch.utils.data import DataLoader
+
+    xs, ys, ps, ts = [], [], [], []
+    for x, y, meta in DataLoader(ds, batch_size=batch_size):
+        xs.append(x), ys.append(y), ps.append(meta["patient"].numpy()), ts.append(meta["target_ts"].numpy())
+    return torch.cat(xs), torch.cat(ys), np.concatenate(ps), np.concatenate(ts)
+
+
+def window_fingerprint(patients: np.ndarray, target_ts: np.ndarray) -> str:
+    """SHA-256 over the ordered (patient, target timestamp) list: two runs share a fingerprint
+    only if they are scored on exactly the same windows in the same order."""
+    import hashlib
+
+    h = hashlib.sha256()
+    h.update(np.asarray(patients, dtype=np.int64).tobytes())
+    h.update(np.asarray(target_ts, dtype=np.int64).tobytes())
+    return h.hexdigest()
+
+
+def build_datasets(cfg: dict, patients: list[int] | None = None, scaler: Scaler | None = None):
+    """(train, val, test datasets, scaler). Unless a ``scaler`` is supplied (evaluation reuses
+    the one saved with the checkpoint), it is fit on training segments only. Window counts are
+    persisted to ``<results_dir>/window_counts_ph<minutes>.csv``, one file per horizon."""
     all_patients = [p for ps in cfg["cohorts"].values() for p in ps]
     patients = [p for p in all_patients if not patients or p in patients]
     proc = cfg["paths"]["processed_dir"]
@@ -213,7 +235,8 @@ def build_datasets(cfg: dict, patients: list[int] | None = None):
 
     train_grids = load_grids(proc, patients, "train")
     train_seg = make_segments(cfg, train_grids, "train")
-    scaler = Scaler.fit(train_seg)  # training rows only: no val/test statistics
+    if scaler is None:
+        scaler = Scaler.fit(train_seg)  # training rows only: no val/test statistics
     parts = {
         "train": train_seg,
         "val": make_segments(cfg, train_grids, "val"),
@@ -225,7 +248,7 @@ def build_datasets(cfg: dict, patients: list[int] | None = None):
             seg, scaler, columns, w["window_len"], w["horizon"], w["max_imputed_frac"], cfg["grid"]["step_min"]
         )
         datasets[name] = ds
-        rows += [{"split": name, **c} for c in ds.counts]
+        rows += [{"split": name, "horizon_min": w["horizon"] * cfg["grid"]["step_min"], "window_len": w["window_len"], **c} for c in ds.counts]
     # Windows that would span the train/val cut = candidates of the uncut grid minus the two
     # segments' candidates. They exist in neither dataset.
     span = w["window_len"] + w["horizon"] - 1
@@ -236,7 +259,7 @@ def build_datasets(cfg: dict, patients: list[int] | None = None):
             r["boundary_dropped"] = full - cand[("train", r["patient"])] - r["candidates"]
     out = Path(cfg["paths"]["results_dir"])
     out.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(rows).to_csv(out / "window_counts.csv", index=False)
+    pd.DataFrame(rows).to_csv(out / f"window_counts_ph{w['horizon'] * cfg['grid']['step_min']}.csv", index=False)
     return datasets["train"], datasets["val"], datasets["test"], scaler
 
 

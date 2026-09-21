@@ -1,0 +1,45 @@
+seed: 42
+paths:
+  data_root: data/raw
+  processed_dir: data/processed
+  results_dir: results
+  checkpoint_dir: checkpoints
+cohorts:
+  '2018':
+  - 559
+  - 563
+  - 570
+  - 575
+  - 588
+  - 591
+  '2020':
+  - 540
+  - 544
+  - 552
+  - 567
+  - 584
+  - 596
+grid:
+  step_min: 5
+gap:
+  max_interp_gap_min: 30
+features:
+  insulin_carbs: false
+  time_of_day: false
+split:
+  val_frac: 0.2
+window:
+  window_len: 12
+  horizon: 6
+  max_imputed_frac: 0.25
+model:
+  type: lstm
+  hidden_size: 64
+  num_layers: 2
+  dropout: 0.2
+train:
+  lr: 0.001
+  batch_size: 256
+  max_epochs: 100
+  patience: 10
+  grad_clip: 1.0

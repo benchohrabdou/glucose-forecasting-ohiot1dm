@@ -246,6 +246,6 @@ def test_build_datasets_fits_scaler_on_training_part_only_and_reports_boundary(t
     train, val, test, tampered = build_datasets(_write_cache(tmp_b, val_shift=500.0))
     assert tampered == clean  # a +500 mg/dL shift confined to validation cannot move the scaler
     assert len(train) > 0 and len(val) > 0 and len(test) > 0
-    counts = pd.read_csv(tmp_b / "results" / "window_counts.csv")
+    counts = pd.read_csv(tmp_b / "results" / "window_counts_ph30.csv")
     assert set(counts["split"]) == {"train", "val", "test"}
     assert counts.loc[counts["split"] == "val", "boundary_dropped"].item() == 12 + 6 - 1
