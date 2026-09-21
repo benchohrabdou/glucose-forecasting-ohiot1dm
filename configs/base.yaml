@@ -1,0 +1,38 @@
+# Shared settings. Every threshold that shapes the data lives here, named and documented.
+seed: 42
+
+paths:
+  # Layout: <data_root>/<year>/{train,test}/<id>-ws-{training,testing}.xml
+  # Gitignored (Data Use Agreement). Override from the CLI/config, never hardcode elsewhere.
+  data_root: data/raw
+  processed_dir: data/processed   # cached grids; patient data, gitignored
+  results_dir: results            # aggregate metrics and figures only
+
+cohorts:
+  "2018": [559, 563, 570, 575, 588, 591]
+  "2020": [540, 544, 552, 567, 584, 596]
+
+grid:
+  step_min: 5   # CGM sampling period; every stream is snapped to this grid
+
+gap:
+  # Causal forward-fill of glucose, identical for train, validation and test: at most this many
+  # minutes (30 -> 6 bins) after the last real reading; beyond that the bins stay NaN.
+  # No interpolation anywhere: it would leak later readings into window inputs and give the
+  # model a fill pattern at train time that it never sees at test time.
+  # (Key name kept from the spec; it now bounds forward-fill, not interpolation.)
+  max_interp_gap_min: 30
+
+features:
+  # Model inputs are always glucose + glucose_observed (1 = real reading, 0 = forward-filled),
+  # so the model can tell imputed values from measured ones.
+  insulin_carbs: false   # true adds bolus, basal, carbs
+  time_of_day: false     # true adds tod_sin / tod_cos
+
+split:
+  val_frac: 0.2          # last 20% of each patient's training file, chronologically
+
+window:
+  window_len: 12         # input steps (12 = 60 min; 24 = 120 min)
+  horizon: 6             # prediction horizon in steps (6 = 30 min, 12 = 60 min)
+  max_imputed_frac: 0.25 # reject windows with more imputed input glucose than this

@@ -1,0 +1,15 @@
+# Raw data is under a Data Use Agreement: never commit it or anything derived from it.
+# Anchored: an unanchored "data/" would also hide the source package src/data/.
+/data/
+src/data/raw/
+src/data/processed/
+*.xml
+
+# Model artifacts
+checkpoints/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
