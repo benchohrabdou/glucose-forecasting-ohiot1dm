@@ -1,0 +1,129 @@
+horizon_min,model,lag_min,rmse
+30,persistence,0,23.3475
+30,persistence,5,20.3089
+30,persistence,10,17.0668
+30,persistence,15,13.579
+30,persistence,20,9.7634
+30,persistence,25,5.406
+30,persistence,30,0.0
+30,persistence,35,5.4123
+30,persistence,40,9.7732
+30,persistence,45,13.5917
+30,persistence,50,17.0898
+30,persistence,55,20.3525
+30,persistence,60,23.413
+30,ridge,0,20.08
+30,ridge,5,17.3811
+30,ridge,10,14.6982
+30,ridge,15,12.1907
+30,ridge,20,10.2117
+30,ridge,25,9.5233
+30,ridge,30,11.5841
+30,ridge,35,16.3627
+30,ridge,40,20.2577
+30,ridge,45,23.5825
+30,ridge,50,26.6257
+30,ridge,55,29.4537
+30,ridge,60,32.0827
+30,lstm (glucose only),0,18.8815
+30,lstm (glucose only),5,16.3377
+30,lstm (glucose only),10,13.9798
+30,lstm (glucose only),15,12.0356
+30,lstm (glucose only),20,10.9564
+30,lstm (glucose only),25,11.3158
+30,lstm (glucose only),30,13.8422
+30,lstm (glucose only),35,18.2906
+30,lstm (glucose only),40,22.001
+30,lstm (glucose only),45,25.3012
+30,lstm (glucose only),50,28.3139
+30,lstm (glucose only),55,31.0894
+30,lstm (glucose only),60,33.6631
+30,lstm (glucose + insulin/carbs),0,18.4168
+30,lstm (glucose + insulin/carbs),5,16.119
+30,lstm (glucose + insulin/carbs),10,14.0863
+30,lstm (glucose + insulin/carbs),15,12.529
+30,lstm (glucose + insulin/carbs),20,11.8119
+30,lstm (glucose + insulin/carbs),25,12.3577
+30,lstm (glucose + insulin/carbs),30,14.7249
+30,lstm (glucose + insulin/carbs),35,18.8266
+30,lstm (glucose + insulin/carbs),40,22.3713
+30,lstm (glucose + insulin/carbs),45,25.5647
+30,lstm (glucose + insulin/carbs),50,28.4907
+30,lstm (glucose + insulin/carbs),55,31.2125
+30,lstm (glucose + insulin/carbs),60,33.7371
+60,persistence,0,38.3063
+60,persistence,5,36.163
+60,persistence,10,33.8974
+60,persistence,15,31.4932
+60,persistence,20,28.9313
+60,persistence,25,26.211
+60,persistence,30,23.34
+60,persistence,35,20.2941
+60,persistence,40,17.0494
+60,persistence,45,13.5591
+60,persistence,50,9.7462
+60,persistence,55,5.3979
+60,persistence,60,0.0
+60,persistence,65,5.4054
+60,persistence,70,9.7584
+60,persistence,75,13.5761
+60,persistence,80,17.0774
+60,persistence,85,20.3445
+60,persistence,90,23.4122
+60,ridge,0,33.9792
+60,ridge,5,32.1248
+60,ridge,10,30.2088
+60,ridge,15,28.2223
+60,ridge,20,26.168
+60,ridge,25,24.1156
+60,ridge,30,22.1394
+60,ridge,35,20.2779
+60,ridge,40,18.6331
+60,ridge,45,17.3568
+60,ridge,50,16.6601
+60,ridge,55,16.8311
+60,ridge,60,18.5677
+60,ridge,65,22.2441
+60,ridge,70,25.4495
+60,ridge,75,28.2581
+60,ridge,80,30.86
+60,ridge,85,33.2926
+60,ridge,90,35.5655
+60,lstm (glucose only),0,32.3611
+60,lstm (glucose only),5,30.5077
+60,lstm (glucose only),10,28.613
+60,lstm (glucose only),15,26.6992
+60,lstm (glucose only),20,24.7871
+60,lstm (glucose only),25,22.931
+60,lstm (glucose only),30,21.2203
+60,lstm (glucose only),35,19.741
+60,lstm (glucose only),40,18.6261
+60,lstm (glucose only),45,18.014
+60,lstm (glucose only),50,18.0855
+60,lstm (glucose only),55,18.9882
+60,lstm (glucose only),60,21.1272
+60,lstm (glucose only),65,24.623
+60,lstm (glucose only),70,27.6915
+60,lstm (glucose only),75,30.4732
+60,lstm (glucose only),80,33.0149
+60,lstm (glucose only),85,35.3539
+60,lstm (glucose only),90,37.5311
+60,lstm (glucose + insulin/carbs),0,31.5149
+60,lstm (glucose + insulin/carbs),5,29.8013
+60,lstm (glucose + insulin/carbs),10,28.0917
+60,lstm (glucose + insulin/carbs),15,26.4211
+60,lstm (glucose + insulin/carbs),20,24.8224
+60,lstm (glucose + insulin/carbs),25,23.3512
+60,lstm (glucose + insulin/carbs),30,22.0876
+60,lstm (glucose + insulin/carbs),35,21.0903
+60,lstm (glucose + insulin/carbs),40,20.4263
+60,lstm (glucose + insulin/carbs),45,20.1605
+60,lstm (glucose + insulin/carbs),50,20.3872
+60,lstm (glucose + insulin/carbs),55,21.2379
+60,lstm (glucose + insulin/carbs),60,23.0883
+60,lstm (glucose + insulin/carbs),65,26.187
+60,lstm (glucose + insulin/carbs),70,29.0003
+60,lstm (glucose + insulin/carbs),75,31.5795
+60,lstm (glucose + insulin/carbs),80,34.006
+60,lstm (glucose + insulin/carbs),85,36.2925
+60,lstm (glucose + insulin/carbs),90,38.4462

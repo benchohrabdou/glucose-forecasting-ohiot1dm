@@ -1,0 +1,289 @@
+horizon_min,patient,range,model,n_readings,low_n,rmse,mae,bias,rmse_seed_std
+30,540,hypo (<70),persistence,130,False,20.5288,13.7846,11.9077,
+30,540,hypo (<70),ridge,130,False,17.539,14.4023,13.5108,
+30,540,hypo (<70),lstm (glucose only),130,False,18.2124,15.6647,15.6093,0.8494
+30,540,hypo (<70),lstm (glucose + insulin/carbs),130,False,16.9047,14.7371,14.6241,1.3821
+30,540,in range (70-180),persistence,1737,False,27.001,19.8831,2.7709,
+30,540,in range (70-180),ridge,1737,False,21.7114,16.2541,3.9116,
+30,540,in range (70-180),lstm (glucose only),1737,False,20.2074,14.9136,2.8888,0.242
+30,540,in range (70-180),lstm (glucose + insulin/carbs),1737,False,18.2757,13.6972,2.2328,0.4132
+30,540,hyper (>180),persistence,906,False,31.9768,24.5011,-7.4216,
+30,540,hyper (>180),ridge,906,False,25.8132,19.6946,-10.3973,
+30,540,hyper (>180),lstm (glucose only),906,False,24.0208,17.95,-7.6108,0.2763
+30,540,hyper (>180),lstm (glucose + insulin/carbs),906,False,24.8493,18.7521,-10.5578,0.3615
+30,544,hypo (<70),persistence,28,True,10.2382,7.5357,6.75,
+30,544,hypo (<70),ridge,28,True,12.6422,11.9934,11.9934,
+30,544,hypo (<70),lstm (glucose only),28,True,12.8124,12.1261,12.1229,1.2248
+30,544,hypo (<70),lstm (glucose + insulin/carbs),28,True,12.867,11.8895,11.8895,0.799
+30,544,in range (70-180),persistence,1790,False,19.4314,14.6101,2.8212,
+30,544,in range (70-180),ridge,1790,False,15.7044,11.7433,3.2345,
+30,544,in range (70-180),lstm (glucose only),1790,False,14.7767,10.6817,1.9782,0.1951
+30,544,in range (70-180),lstm (glucose + insulin/carbs),1790,False,14.2244,10.4064,3.6184,0.3899
+30,544,hyper (>180),persistence,821,False,28.547,21.1413,-7.1705,
+30,544,hyper (>180),ridge,821,False,24.3415,17.4347,-7.7898,
+30,544,hyper (>180),lstm (glucose only),821,False,23.6437,17.1734,-6.5721,0.2825
+30,544,hyper (>180),lstm (glucose + insulin/carbs),821,False,22.2282,16.0451,-4.499,0.3253
+30,552,hypo (<70),persistence,64,False,19.5911,14.7188,12.625,
+30,552,hypo (<70),ridge,64,False,18.4052,16.352,14.5999,
+30,552,hypo (<70),lstm (glucose only),64,False,17.6135,15.5815,15.0028,0.7518
+30,552,hypo (<70),lstm (glucose + insulin/carbs),64,False,17.2178,15.5673,14.7212,1.0571
+30,552,in range (70-180),persistence,1756,False,19.4156,13.7716,0.5655,
+30,552,in range (70-180),ridge,1756,False,16.4402,12.5838,3.7042,
+30,552,in range (70-180),lstm (glucose only),1756,False,15.4191,11.4392,2.648,0.1885
+30,552,in range (70-180),lstm (glucose + insulin/carbs),1756,False,15.027,11.1907,2.4966,0.3573
+30,552,hyper (>180),persistence,414,False,25.871,19.7585,-7.0097,
+30,552,hyper (>180),ridge,414,False,20.8089,15.7849,-10.0619,
+30,552,hyper (>180),lstm (glucose only),414,False,18.7368,13.7998,-6.0081,0.245
+30,552,hyper (>180),lstm (glucose + insulin/carbs),414,False,18.5624,13.8171,-8.0258,0.6538
+30,559,hypo (<70),persistence,72,False,18.5379,11.5139,8.0694,
+30,559,hypo (<70),ridge,72,False,15.643,11.9766,11.5181,
+30,559,hypo (<70),lstm (glucose only),72,False,17.5671,15.2395,15.1416,1.0248
+30,559,hypo (<70),lstm (glucose + insulin/carbs),72,False,18.7209,16.2024,16.2023,1.3268
+30,559,in range (70-180),persistence,1333,False,20.1573,14.6602,2.3541,
+30,559,in range (70-180),ridge,1333,False,16.0457,11.558,3.0194,
+30,559,in range (70-180),lstm (glucose only),1333,False,15.0561,10.5215,2.0159,0.1553
+30,559,in range (70-180),lstm (glucose + insulin/carbs),1333,False,14.8448,10.3783,2.8401,0.3236
+30,559,hyper (>180),persistence,939,False,28.0447,20.5069,-4.7412,
+30,559,hyper (>180),ridge,939,False,24.5328,17.7121,-9.4503,
+30,559,hyper (>180),lstm (glucose only),939,False,22.6363,15.9138,-7.4202,0.3531
+30,559,hyper (>180),lstm (glucose + insulin/carbs),939,False,22.1784,15.7429,-6.6847,0.3737
+30,563,hypo (<70),persistence,14,True,17.0566,14.2143,13.0714,
+30,563,hypo (<70),ridge,14,True,20.4079,16.3551,16.317,
+30,563,hypo (<70),lstm (glucose only),14,True,21.8707,17.2593,17.2377,1.1265
+30,563,hypo (<70),lstm (glucose + insulin/carbs),14,True,20.206,15.8438,15.7341,0.8439
+30,563,in range (70-180),persistence,1541,False,19.1072,14.1973,2.7229,
+30,563,in range (70-180),ridge,1541,False,17.2473,12.0652,2.4751,
+30,563,in range (70-180),lstm (glucose only),1541,False,15.9798,11.55,2.4527,0.1473
+30,563,in range (70-180),lstm (glucose + insulin/carbs),1541,False,15.4791,11.2163,1.3799,0.3025
+30,563,hyper (>180),persistence,981,False,23.2152,17.4628,-4.1193,
+30,563,hyper (>180),ridge,981,False,21.322,14.8715,-6.8172,
+30,563,hyper (>180),lstm (glucose only),981,False,19.8465,14.2087,-4.8007,0.8466
+30,563,hyper (>180),lstm (glucose + insulin/carbs),981,False,20.7676,14.6461,-7.863,0.6373
+30,567,hypo (<70),persistence,177,False,7.7722,5.2881,2.4859,
+30,567,hypo (<70),ridge,177,False,12.2893,10.9536,10.5443,
+30,567,hypo (<70),lstm (glucose only),177,False,13.6032,12.1157,12.0394,1.0624
+30,567,hypo (<70),lstm (glucose + insulin/carbs),177,False,11.6561,10.1129,9.8799,0.9366
+30,567,in range (70-180),persistence,1517,False,24.2515,18.2116,4.9618,
+30,567,in range (70-180),ridge,1517,False,18.6042,13.9934,4.5543,
+30,567,in range (70-180),lstm (glucose only),1517,False,17.5839,12.736,3.0882,0.264
+30,567,in range (70-180),lstm (glucose + insulin/carbs),1517,False,16.7856,12.2543,1.8024,0.3771
+30,567,hyper (>180),persistence,506,False,38.8077,29.3458,-11.1957,
+30,567,hyper (>180),ridge,506,False,31.6461,22.7362,-9.3935,
+30,567,hyper (>180),lstm (glucose only),506,False,30.7603,21.515,-7.5795,0.2773
+30,567,hyper (>180),lstm (glucose + insulin/carbs),506,False,30.3079,20.8372,-10.0624,0.5741
+30,570,hypo (<70),persistence,9,True,18.0954,17.0,17.0,
+30,570,hypo (<70),ridge,9,True,19.4824,17.8065,17.8065,
+30,570,hypo (<70),lstm (glucose only),9,True,17.8637,15.9157,15.8506,1.0211
+30,570,hypo (<70),lstm (glucose + insulin/carbs),9,True,16.071,14.1141,13.9915,1.1517
+30,570,in range (70-180),persistence,803,False,17.5761,12.7547,2.9016,
+30,570,in range (70-180),ridge,803,False,13.3038,9.5376,3.1307,
+30,570,in range (70-180),lstm (glucose only),803,False,12.5542,8.7939,2.0196,0.1676
+30,570,in range (70-180),lstm (glucose + insulin/carbs),803,False,11.6741,8.282,1.8456,0.2754
+30,570,hyper (>180),persistence,1800,False,19.4893,14.3561,-0.8739,
+30,570,hyper (>180),ridge,1800,False,19.3621,14.3546,-10.0435,
+30,570,hyper (>180),lstm (glucose only),1800,False,17.7219,12.432,-6.4862,0.4737
+30,570,hyper (>180),lstm (glucose + insulin/carbs),1800,False,17.6542,12.5342,-7.1538,0.3023
+30,575,hypo (<70),persistence,134,False,18.886,14.5299,9.1119,
+30,575,hypo (<70),ridge,134,False,18.4106,15.3933,11.9916,
+30,575,hypo (<70),lstm (glucose only),134,False,20.7922,16.9976,16.4033,0.9086
+30,575,hypo (<70),lstm (glucose + insulin/carbs),134,False,20.3902,16.1367,15.5266,1.2603
+30,575,in range (70-180),persistence,1583,False,22.2332,15.5237,2.4081,
+30,575,in range (70-180),ridge,1583,False,18.8983,13.3586,4.6702,
+30,575,in range (70-180),lstm (glucose only),1583,False,16.7317,11.549,3.2352,0.2466
+30,575,in range (70-180),lstm (glucose + insulin/carbs),1583,False,16.2117,11.044,3.1421,0.3077
+30,575,hyper (>180),persistence,739,False,32.6073,22.9405,-6.5913,
+30,575,hyper (>180),ridge,739,False,33.1679,21.1492,-9.5117,
+30,575,hyper (>180),lstm (glucose only),739,False,28.6986,18.787,-7.7444,0.3989
+30,575,hyper (>180),lstm (glucose + insulin/carbs),739,False,29.1476,18.5321,-8.5097,0.4731
+30,584,hypo (<70),persistence,25,True,17.8056,15.76,14.24,
+30,584,hypo (<70),ridge,25,True,19.7023,15.9145,14.7437,
+30,584,hypo (<70),lstm (glucose only),25,True,26.2769,22.787,22.54,0.4655
+30,584,hypo (<70),lstm (glucose + insulin/carbs),25,True,29.2018,25.801,25.5617,1.5585
+30,584,in range (70-180),persistence,1483,False,21.2546,15.7984,3.0094,
+30,584,in range (70-180),ridge,1483,False,19.2527,14.0425,3.2332,
+30,584,in range (70-180),lstm (glucose only),1483,False,18.8547,13.8549,3.295,0.1836
+30,584,in range (70-180),lstm (glucose + insulin/carbs),1483,False,19.3285,14.2053,5.3271,0.5617
+30,584,hyper (>180),persistence,927,False,29.7057,21.0291,-7.754,
+30,584,hyper (>180),ridge,927,False,26.7163,18.7628,-11.099,
+30,584,hyper (>180),lstm (glucose only),927,False,25.826,17.769,-8.4673,0.3962
+30,584,hyper (>180),lstm (glucose + insulin/carbs),927,False,24.8276,16.9141,-7.6895,0.7884
+30,588,hypo (<70),persistence,3,True,14.0238,14.0,14.0,
+30,588,hypo (<70),ridge,3,True,18.4235,17.4442,17.4442,
+30,588,hypo (<70),lstm (glucose only),3,True,20.7028,19.1141,19.1141,0.4961
+30,588,hypo (<70),lstm (glucose + insulin/carbs),3,True,17.6279,16.626,16.626,1.5448
+30,588,in range (70-180),persistence,1487,False,19.8547,14.9852,3.1318,
+30,588,in range (70-180),ridge,1487,False,16.7797,12.4958,2.461,
+30,588,in range (70-180),lstm (glucose only),1487,False,16.4835,12.0276,1.729,0.1434
+30,588,in range (70-180),lstm (glucose + insulin/carbs),1487,False,15.8146,11.7035,2.5588,0.344
+30,588,hyper (>180),persistence,1250,False,24.1026,17.2392,-4.8632,
+30,588,hyper (>180),ridge,1250,False,20.7101,14.7412,-7.8954,
+30,588,hyper (>180),lstm (glucose only),1250,False,20.4973,14.5195,-6.0411,0.337
+30,588,hyper (>180),lstm (glucose + insulin/carbs),1250,False,18.5561,13.4293,-5.3203,0.4023
+30,591,hypo (<70),persistence,123,False,18.2632,14.5528,11.1382,
+30,591,hypo (<70),ridge,123,False,18.3284,15.008,12.212,
+30,591,hypo (<70),lstm (glucose only),123,False,19.4425,16.3303,15.8021,0.7337
+30,591,hypo (<70),lstm (glucose + insulin/carbs),123,False,19.6414,16.6053,15.8565,1.0424
+30,591,in range (70-180),persistence,1841,False,24.2186,17.8914,2.0478,
+30,591,in range (70-180),ridge,1841,False,21.5895,15.4603,4.1945,
+30,591,in range (70-180),lstm (glucose only),1841,False,19.9383,14.3573,4.2176,0.2053
+30,591,in range (70-180),lstm (glucose + insulin/carbs),1841,False,19.8871,14.2678,4.5954,0.4739
+30,591,hyper (>180),persistence,745,False,26.7394,19.4349,-6.9436,
+30,591,hyper (>180),ridge,745,False,24.3276,17.1708,-7.7186,
+30,591,hyper (>180),lstm (glucose only),745,False,22.4307,15.8616,-6.2669,0.3133
+30,591,hyper (>180),lstm (glucose + insulin/carbs),745,False,22.0239,15.6904,-6.3656,0.4039
+30,596,hypo (<70),persistence,65,False,21.7348,17.3538,15.6,
+30,596,hypo (<70),ridge,65,False,19.9896,17.5109,14.5742,
+30,596,hypo (<70),lstm (glucose only),65,False,21.1459,18.3453,18.0696,0.6704
+30,596,hypo (<70),lstm (glucose + insulin/carbs),65,False,20.5198,17.6099,17.398,1.1868
+30,596,in range (70-180),persistence,1931,False,19.2847,14.0207,1.5412,
+30,596,in range (70-180),ridge,1931,False,16.2493,11.7894,3.3389,
+30,596,in range (70-180),lstm (glucose only),1931,False,15.4539,10.9761,2.9391,0.1879
+30,596,in range (70-180),lstm (glucose + insulin/carbs),1931,False,15.0267,10.5889,2.9636,0.2927
+30,596,hyper (>180),persistence,628,False,26.0859,19.1561,-5.5159,
+30,596,hyper (>180),ridge,628,False,21.4541,15.1168,-7.5522,
+30,596,hyper (>180),lstm (glucose only),628,False,20.6727,14.5851,-5.9023,0.3601
+30,596,hyper (>180),lstm (glucose + insulin/carbs),628,False,18.9907,13.5884,-5.2905,0.3028
+60,540,hypo (<70),persistence,128,False,45.0885,32.4922,30.8359,
+60,540,hypo (<70),ridge,128,False,44.3896,38.3644,38.3644,
+60,540,hypo (<70),lstm (glucose only),128,False,41.2067,37.6415,37.6415,0.7919
+60,540,hypo (<70),lstm (glucose + insulin/carbs),128,False,39.8555,37.3213,37.3213,0.9442
+60,540,in range (70-180),persistence,1734,False,42.9662,32.312,7.515,
+60,540,in range (70-180),ridge,1734,False,36.5353,28.0427,11.0882,
+60,540,in range (70-180),lstm (glucose only),1734,False,34.1407,25.9357,9.6033,0.6594
+60,540,in range (70-180),lstm (glucose + insulin/carbs),1734,False,30.2251,22.9953,6.6505,0.6966
+60,540,hyper (>180),persistence,891,False,55.35,43.321,-19.4557,
+60,540,hyper (>180),ridge,891,False,48.503,37.9557,-29.0663,
+60,540,hyper (>180),lstm (glucose only),891,False,46.8216,36.5674,-25.7892,1.0886
+60,540,hyper (>180),lstm (glucose + insulin/carbs),891,False,49.5726,38.8176,-30.3283,2.153
+60,544,hypo (<70),persistence,28,True,21.9821,14.7857,14.2857,
+60,544,hypo (<70),ridge,28,True,33.7549,31.0916,31.0916,
+60,544,hypo (<70),lstm (glucose only),28,True,36.6101,33.165,33.165,2.7631
+60,544,hypo (<70),lstm (glucose + insulin/carbs),28,True,31.8758,27.6966,27.6966,3.2628
+60,544,in range (70-180),persistence,1772,False,31.1553,24.3081,9.0587,
+60,544,in range (70-180),ridge,1772,False,26.0687,21.0067,10.8712,
+60,544,in range (70-180),lstm (glucose only),1772,False,24.6618,19.2978,8.494,0.3804
+60,544,in range (70-180),lstm (glucose + insulin/carbs),1772,False,23.6247,18.4573,9.8773,0.8912
+60,544,hyper (>180),persistence,815,False,49.8812,38.454,-22.0785,
+60,544,hyper (>180),ridge,815,False,43.4566,33.4221,-25.58,
+60,544,hyper (>180),lstm (glucose only),815,False,42.6842,33.0858,-23.6693,1.0235
+60,544,hyper (>180),lstm (glucose + insulin/carbs),815,False,37.8556,29.2445,-17.4261,0.9463
+60,552,hypo (<70),persistence,64,False,40.4313,30.2188,30.0,
+60,552,hypo (<70),ridge,64,False,43.7579,39.0136,39.0136,
+60,552,hypo (<70),lstm (glucose only),64,False,43.0586,37.772,37.772,1.0496
+60,552,hypo (<70),lstm (glucose + insulin/carbs),64,False,40.2345,37.4098,37.4098,1.8517
+60,552,in range (70-180),persistence,1726,False,30.6121,22.2735,1.3326,
+60,552,in range (70-180),ridge,1726,False,27.868,21.9568,9.1687,
+60,552,in range (70-180),lstm (glucose only),1726,False,26.5598,20.4917,7.6157,0.5762
+60,552,in range (70-180),lstm (glucose + insulin/carbs),1726,False,25.7529,20.3273,7.4857,0.606
+60,552,hyper (>180),persistence,405,False,43.7181,33.8889,-15.5037,
+60,552,hyper (>180),ridge,405,False,39.2052,30.8779,-25.5701,
+60,552,hyper (>180),lstm (glucose only),405,False,35.6594,27.3311,-19.0092,0.5053
+60,552,hyper (>180),lstm (glucose + insulin/carbs),405,False,36.5342,28.2628,-21.6554,1.1141
+60,559,hypo (<70),persistence,72,False,42.018,28.6528,25.8194,
+60,559,hypo (<70),ridge,72,False,42.652,34.7106,34.7106,
+60,559,hypo (<70),lstm (glucose only),72,False,45.5463,40.3196,40.3196,1.0799
+60,559,hypo (<70),lstm (glucose + insulin/carbs),72,False,50.3591,45.4139,45.4139,1.1896
+60,559,in range (70-180),persistence,1295,False,33.9263,25.007,7.149,
+60,559,in range (70-180),ridge,1295,False,26.4234,19.7624,8.8994,
+60,559,in range (70-180),lstm (glucose only),1295,False,24.9024,18.4774,7.4157,0.4561
+60,559,in range (70-180),lstm (glucose + insulin/carbs),1295,False,24.8992,18.4595,7.8361,0.7955
+60,559,hyper (>180),persistence,921,False,46.5711,35.1564,-12.5157,
+60,559,hyper (>180),ridge,921,False,43.3178,32.8663,-24.7464,
+60,559,hyper (>180),lstm (glucose only),921,False,40.7945,30.2709,-21.0749,0.5717
+60,559,hyper (>180),lstm (glucose + insulin/carbs),921,False,39.3973,29.6459,-17.8082,0.5535
+60,563,hypo (<70),persistence,14,True,26.0316,22.2143,22.2143,
+60,563,hypo (<70),ridge,14,True,33.7386,30.4523,30.4523,
+60,563,hypo (<70),lstm (glucose only),14,True,40.9757,39.4508,39.4508,1.1006
+60,563,hypo (<70),lstm (glucose + insulin/carbs),14,True,33.0664,32.079,32.079,1.9129
+60,563,in range (70-180),persistence,1535,False,31.3117,23.2326,7.4371,
+60,563,in range (70-180),ridge,1535,False,25.1839,18.6974,7.1334,
+60,563,in range (70-180),lstm (glucose only),1535,False,24.6596,18.5171,7.3167,0.2627
+60,563,in range (70-180),lstm (glucose + insulin/carbs),1535,False,23.2096,17.3951,2.4972,0.2502
+60,563,hyper (>180),persistence,975,False,38.0171,29.3344,-11.5641,
+60,563,hyper (>180),ridge,975,False,36.102,26.8362,-18.4493,
+60,563,hyper (>180),lstm (glucose only),975,False,33.3053,25.2556,-15.0266,1.2124
+60,563,hyper (>180),lstm (glucose + insulin/carbs),975,False,36.9859,27.2725,-20.9772,1.1883
+60,567,hypo (<70),persistence,180,False,16.5136,10.5889,8.0778,
+60,567,hypo (<70),ridge,180,False,29.6264,27.315,27.315,
+60,567,hypo (<70),lstm (glucose only),180,False,33.1474,31.072,31.072,2.0806
+60,567,hypo (<70),lstm (glucose + insulin/carbs),180,False,28.0409,26.2222,26.2222,3.0332
+60,567,in range (70-180),persistence,1482,False,42.1965,31.3691,11.8968,
+60,567,in range (70-180),ridge,1482,False,33.7323,25.2783,12.806,
+60,567,in range (70-180),lstm (glucose only),1482,False,31.3192,23.3198,10.2208,0.4581
+60,567,in range (70-180),lstm (glucose + insulin/carbs),1482,False,28.5265,21.601,6.899,0.7013
+60,567,hyper (>180),persistence,481,False,61.7514,49.6424,-32.1414,
+60,567,hyper (>180),ridge,481,False,54.2711,42.229,-31.2877,
+60,567,hyper (>180),lstm (glucose only),481,False,53.1006,39.9268,-28.682,0.6704
+60,567,hyper (>180),lstm (glucose + insulin/carbs),481,False,53.763,40.5788,-32.0127,0.7736
+60,570,hypo (<70),persistence,9,True,35.3066,33.0,33.0,
+60,570,hypo (<70),ridge,9,True,41.8732,40.6929,40.6929,
+60,570,hypo (<70),lstm (glucose only),9,True,37.2017,36.783,36.783,0.636
+60,570,hypo (<70),lstm (glucose + insulin/carbs),9,True,35.5898,35.0005,35.0005,2.2902
+60,570,in range (70-180),persistence,803,False,30.4771,22.7073,8.0249,
+60,570,in range (70-180),ridge,803,False,23.33,17.1835,8.9822,
+60,570,in range (70-180),lstm (glucose only),803,False,23.0568,16.3037,7.286,0.6808
+60,570,in range (70-180),lstm (glucose + insulin/carbs),803,False,20.4634,15.0173,5.3915,1.0679
+60,570,hyper (>180),persistence,1775,False,32.0476,24.7408,-2.5177,
+60,570,hyper (>180),ridge,1775,False,35.7282,28.6329,-24.4003,
+60,570,hyper (>180),lstm (glucose only),1775,False,31.5094,23.6321,-17.5568,0.7782
+60,570,hyper (>180),lstm (glucose + insulin/carbs),1775,False,31.516,23.6528,-16.5363,1.7435
+60,575,hypo (<70),persistence,134,False,41.5751,29.2687,27.6567,
+60,575,hypo (<70),ridge,134,False,38.7173,33.7221,33.6369,
+60,575,hypo (<70),lstm (glucose only),134,False,40.1273,37.4143,37.4143,0.7474
+60,575,hypo (<70),lstm (glucose + insulin/carbs),134,False,38.9764,34.4977,34.4977,0.8757
+60,575,in range (70-180),persistence,1572,False,35.2879,25.4784,4.7557,
+60,575,in range (70-180),ridge,1572,False,30.0624,22.7712,11.2997,
+60,575,in range (70-180),lstm (glucose only),1572,False,27.2533,20.3748,10.1098,0.7109
+60,575,in range (70-180),lstm (glucose + insulin/carbs),1572,False,27.0644,19.7385,8.2864,0.5855
+60,575,hyper (>180),persistence,732,False,46.4469,34.8784,-15.832,
+60,575,hyper (>180),ridge,732,False,47.8531,35.2287,-24.573,
+60,575,hyper (>180),lstm (glucose only),732,False,43.5303,32.2893,-22.4733,0.8994
+60,575,hyper (>180),lstm (glucose + insulin/carbs),732,False,44.0864,32.0144,-22.2305,0.8083
+60,584,hypo (<70),persistence,23,True,37.3113,34.3043,34.2174,
+60,584,hypo (<70),ridge,23,True,46.9693,43.1327,43.1327,
+60,584,hypo (<70),lstm (glucose only),23,True,57.0514,55.3464,55.3464,0.8122
+60,584,hypo (<70),lstm (glucose + insulin/carbs),23,True,49.402,47.2054,47.2054,2.0367
+60,584,in range (70-180),persistence,1460,False,36.856,26.2233,9.0767,
+60,584,in range (70-180),ridge,1460,False,30.0011,22.3854,9.5332,
+60,584,in range (70-180),lstm (glucose only),1460,False,30.0521,22.6716,9.1183,0.5073
+60,584,in range (70-180),lstm (glucose + insulin/carbs),1460,False,29.7628,22.6106,10.7787,1.1178
+60,584,hyper (>180),persistence,925,False,47.8607,35.2843,-19.7427,
+60,584,hyper (>180),ridge,925,False,46.8292,34.8213,-28.3702,
+60,584,hyper (>180),lstm (glucose only),925,False,45.5802,32.9424,-24.2892,0.7893
+60,584,hyper (>180),lstm (glucose + insulin/carbs),925,False,42.3051,30.4692,-21.1218,1.3919
+60,588,hypo (<70),persistence,3,True,35.1473,34.6667,34.6667,
+60,588,hypo (<70),ridge,3,True,34.9122,34.1079,34.1079,
+60,588,hypo (<70),lstm (glucose only),3,True,25.4317,24.9883,24.9883,0.5628
+60,588,hypo (<70),lstm (glucose + insulin/carbs),3,True,29.8137,29.409,29.409,2.9671
+60,588,in range (70-180),persistence,1475,False,32.3695,24.8163,8.0149,
+60,588,in range (70-180),ridge,1475,False,26.2718,19.7682,7.5469,
+60,588,in range (70-180),lstm (glucose only),1475,False,25.7689,19.4467,6.6655,0.404
+60,588,in range (70-180),lstm (glucose + insulin/carbs),1475,False,25.2418,19.0296,6.0444,0.7198
+60,588,hyper (>180),persistence,1244,False,39.7326,29.0764,-11.7548,
+60,588,hyper (>180),ridge,1244,False,36.2516,26.4802,-20.5228,
+60,588,hyper (>180),lstm (glucose only),1244,False,36.2101,25.7378,-17.9415,0.6097
+60,588,hyper (>180),lstm (glucose + insulin/carbs),1244,False,32.5777,24.0194,-16.7951,0.9916
+60,591,hypo (<70),persistence,122,False,43.1728,33.3033,33.123,
+60,591,hypo (<70),ridge,122,False,44.4688,39.9376,39.9376,
+60,591,hypo (<70),lstm (glucose only),122,False,43.4405,40.1279,40.1279,0.9986
+60,591,hypo (<70),lstm (glucose + insulin/carbs),122,False,42.0463,38.5064,38.5064,1.6805
+60,591,in range (70-180),persistence,1824,False,37.7385,28.54,4.4885,
+60,591,in range (70-180),ridge,1824,False,32.2745,24.7847,10.2303,
+60,591,in range (70-180),lstm (glucose only),1824,False,29.8482,22.928,10.6815,0.7519
+60,591,in range (70-180),lstm (glucose + insulin/carbs),1824,False,30.6974,23.3872,9.7625,0.6547
+60,591,hyper (>180),persistence,745,False,40.2668,30.6322,-17.4242,
+60,591,hyper (>180),ridge,745,False,38.2118,29.2327,-21.4623,
+60,591,hyper (>180),lstm (glucose only),745,False,36.5742,27.1189,-18.6956,0.6741
+60,591,hyper (>180),lstm (glucose + insulin/carbs),745,False,36.3127,26.9933,-18.4593,0.7869
+60,596,hypo (<70),persistence,64,False,50.1133,41.1875,40.1562,
+60,596,hypo (<70),ridge,64,False,44.7642,39.1541,38.1034,
+60,596,hypo (<70),lstm (glucose only),64,False,45.6363,42.0137,42.0137,0.9946
+60,596,hypo (<70),lstm (glucose + insulin/carbs),64,False,40.9451,37.1307,37.1307,0.7915
+60,596,in range (70-180),persistence,1905,False,30.8928,23.0457,4.1869,
+60,596,in range (70-180),ridge,1905,False,25.3708,19.7095,8.8388,
+60,596,in range (70-180),lstm (glucose only),1905,False,24.2005,18.4729,8.571,0.5499
+60,596,in range (70-180),lstm (glucose + insulin/carbs),1905,False,23.0714,17.2503,6.3247,0.4911
+60,596,hyper (>180),persistence,628,False,45.6442,33.8424,-15.8774,
+60,596,hyper (>180),ridge,628,False,38.9785,28.9657,-21.0706,
+60,596,hyper (>180),lstm (glucose only),628,False,37.9626,27.9479,-18.3623,0.6814
+60,596,hyper (>180),lstm (glucose + insulin/carbs),628,False,37.4796,27.3554,-17.2006,0.6966

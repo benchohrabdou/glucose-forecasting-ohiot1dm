@@ -13,3 +13,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+
+# Shows a real 8 h CGM trace from a test file (closer to raw data than aggregate results):
+# held back until the data owner confirms it may be published.
+results/figures/predicted_vs_actual*.png

@@ -247,25 +247,34 @@ def model_label(cfg: dict) -> str:
     return f"{cfg['model']['type']} ({'glucose + insulin/carbs' if cfg['features']['insulin_carbs'] else 'glucose only'})"
 
 
-def evaluate_checkpoint(cfg: dict, checkpoint: str | Path, name: str) -> pd.DataFrame:
-    """Score a checkpoint on the test files with the scaler saved alongside it."""
+def load_model(cfg: dict, checkpoint: str | Path, n_features: int):
+    """Rebuild a trained model and its saved scaler from a checkpoint. Raises if the config's
+    window / features / model / gap / split sections differ from the ones it was trained with."""
     ckpt = torch.load(checkpoint, map_location="cpu", weights_only=True)
     for key in ("window", "features", "model", "gap", "split"):
         if cfg[key] != ckpt["cfg"][key]:
             raise ValueError(f"config section '{key}' differs from the one the checkpoint was trained with")
-    scaler = Scaler(**ckpt["scaler"])  # never refit at evaluation time
+    model = build_model(cfg, n_features)
+    model.load_state_dict(ckpt["model_state"])
+    return model, Scaler(**ckpt["scaler"]), ckpt["seed"]  # scaler is never refit at evaluation time
+
+
+def evaluate_checkpoint(cfg: dict, checkpoint: str | Path, name: str) -> pd.DataFrame:
+    """Score a checkpoint on the test files with the scaler saved alongside it."""
+    from src.data.dataset import feature_columns
+
+    _, scaler, _ = load_model(cfg, checkpoint, len(feature_columns(cfg)))
     _, _, test, _ = build_datasets(cfg, scaler=scaler)
     x, y, patients, target_ts = collect_arrays(test)
     horizon_min = cfg["window"]["horizon"] * cfg["grid"]["step_min"]
     verify_fingerprint(cfg, horizon_min, patients, target_ts)
 
-    model = build_model(cfg, x.shape[2])
-    model.load_state_dict(ckpt["model_state"])
+    model, _, seed = load_model(cfg, checkpoint, x.shape[2])
     pred = scaler.unscale_glucose(predict(model, x).numpy()).ravel()
     table = per_patient_metrics(pred, scaler.unscale_glucose(y.numpy()).ravel(), patients)
     table.insert(0, "model", model_label(cfg))
     table.insert(1, "horizon_min", horizon_min)
-    table["seed"] = ckpt["seed"]
+    table["seed"] = seed
     table.to_csv(_results_dir(cfg) / f"model_{name}_per_patient.csv", index=False)
     return table
 
