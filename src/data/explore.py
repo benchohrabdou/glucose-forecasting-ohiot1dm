@@ -62,12 +62,15 @@ def main() -> None:
     rows = []
     for _, s in stats.iterrows():
         grid = pd.read_pickle(Path(cfg["paths"]["processed_dir"]) / f"{s['patient']}_{s['split']}.pkl")
+        summary = summarize(grid, cfg["grid"]["step_min"], cfg["gap"]["max_interp_gap_min"])
         rows.append(
             {
                 "year": s["year"],
                 "patient": s["patient"],
                 "split": s["split"],
-                **summarize(grid, cfg["grid"]["step_min"], cfg["gap"]["max_interp_gap_min"]),
+                **summary,
+                "meals_per_day": round(s["meals_in_grid"] / summary["days"], 2),
+                "boluses_per_day": round(s["boluses_in_grid"] / summary["days"], 2),
                 "cgm_collisions": s["cgm_collisions"],
                 "bolus_outside_grid": s["bolus_outside_grid"],
                 "meal_outside_grid": s["meal_outside_grid"],

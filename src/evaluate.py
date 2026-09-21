@@ -47,25 +47,133 @@ def cohort_of(cfg: dict) -> dict[int, str]:
     return {p: str(year) for year, ps in cfg["cohorts"].items() for p in ps}
 
 
-def write_comparison(cfg: dict) -> pd.DataFrame:
-    """Combine every per-patient result file into ``comparison_per_patient.csv`` and
-    ``comparison_summary.csv`` (mean +/- std across patients, for all patients and per cohort).
-    The published-benchmark column is intentionally left empty for the project owner to fill in."""
+GLUCOSE_LABEL = "lstm (glucose only)"
+INSULIN_LABEL = "lstm (glucose + insulin/carbs)"
+
+
+def _model_order(model: str) -> int:
+    for rank, prefix in enumerate(("persistence", "linear", "ridge", GLUCOSE_LABEL, INSULIN_LABEL)):
+        if model.startswith(prefix):
+            return rank
+    return 9
+
+
+def _load_runs(cfg: dict) -> pd.DataFrame:
+    """Per-patient rows of the baselines and of every multi-seed model run
+    (``model_*_seed*_per_patient.csv``), tagged with the patient's cohort."""
     out = _results_dir(cfg)
-    files = [out / "baselines_per_patient.csv", *sorted(out.glob("model_*_per_patient.csv"))]
-    per_patient = pd.concat([pd.read_csv(f) for f in files if f.exists()], ignore_index=True)
-    per_patient["cohort"] = per_patient["patient"].map(cohort_of(cfg))
-    per_patient.to_csv(out / "comparison_per_patient.csv", index=False)
+    files = [out / "baselines_per_patient.csv", *sorted(out.glob("model_*_seed*_per_patient.csv"))]
+    runs = pd.concat([pd.read_csv(f) for f in files if f.exists()], ignore_index=True)
+    runs["cohort"] = runs["patient"].map(cohort_of(cfg))
+    return runs
+
+
+def _cohorts(cfg: dict) -> list[str]:
+    return ["all", *sorted(set(cohort_of(cfg).values()))]
+
+
+def _subset(runs: pd.DataFrame, cohort: str) -> pd.DataFrame:
+    return runs if cohort == "all" else runs[runs["cohort"] == cohort]
+
+
+def write_comparison(cfg: dict) -> pd.DataFrame:
+    """Combine baselines and multi-seed model runs into three tables.
+
+    * ``comparison_per_patient.csv``: RMSE / MAE per patient, AVERAGED OVER SEEDS.
+    * ``comparison_summary.csv``: per cohort (all / 2018 / 2020), model and horizon:
+      ``rmse_mean`` +/- ``rmse_std`` across patients of the seed-averaged values, and, for models
+      run with several seeds, ``rmse_seed_mean`` +/- ``rmse_seed_std`` = mean and sample std (ddof=1)
+      over seeds of each seed's cross-patient mean RMSE (run-to-run variability).
+    * ``ablation_insulin_carbs.csv``: paired glucose-only vs. insulin/carbs comparison.
+
+    The published-benchmark column is left empty for the project owner to fill in."""
+    out = _results_dir(cfg)
+    runs = _load_runs(cfg)
+    seed_avg = runs.groupby(["model", "horizon_min", "patient"], sort=False).agg(
+        n_windows=("n_windows", "first"), rmse=("rmse", "mean"), mae=("mae", "mean"),
+        n_seeds=("seed", "nunique"), cohort=("cohort", "first")).reset_index()
+    seed_avg.to_csv(out / "comparison_per_patient.csv", index=False)
 
     rows = []
-    for cohort in ("all", *sorted(set(cohort_of(cfg).values()))):
-        sub = per_patient if cohort == "all" else per_patient[per_patient["cohort"] == cohort]
+    for cohort in _cohorts(cfg):
+        sub, sub_raw = _subset(seed_avg, cohort), _subset(runs, cohort)
         for (model, horizon), g in sub.groupby(["model", "horizon_min"], sort=False):
-            rows.append({"cohort": cohort, "model": model, "horizon_min": horizon, "n_patients": len(g),
-                         **summarize_patients(g), "published_bglp_rmse": ""})
+            row = {"cohort": cohort, "model": model, "horizon_min": horizon, "n_patients": len(g),
+                   "n_seeds": int(g["n_seeds"].iloc[0]), **summarize_patients(g)}
+            if row["n_seeds"] > 1:
+                per_seed = sub_raw[(sub_raw["model"] == model) & (sub_raw["horizon_min"] == horizon)]                     .groupby("seed").agg(rmse=("rmse", "mean"), mae=("mae", "mean"))
+                row.update(rmse_seed_mean=per_seed["rmse"].mean(), rmse_seed_std=per_seed["rmse"].std(ddof=1),
+                           mae_seed_mean=per_seed["mae"].mean(), mae_seed_std=per_seed["mae"].std(ddof=1))
+            row["published_bglp_rmse"] = ""
+            rows.append(row)
     summary = pd.DataFrame(rows)
+    summary["_o"] = summary["model"].map(_model_order)
+    cohort_rank = {c: i for i, c in enumerate(_cohorts(cfg))}
+    summary = summary.sort_values(["horizon_min", "cohort", "_o"], key=lambda c: c.map(cohort_rank) if c.name == "cohort" else c,
+                                  kind="stable").drop(columns="_o").reset_index(drop=True)
     summary.to_csv(out / "comparison_summary.csv", index=False)
+    write_ablation(cfg, runs)
+    write_ablation_per_patient(cfg, seed_avg)
     return summary
+
+
+def write_ablation(cfg: dict, runs: pd.DataFrame) -> pd.DataFrame:
+    """Paired glucose-only vs. insulin/carbs comparison, per horizon and cohort.
+
+    ``n_improved`` counts patients whose seed-averaged RMSE is lower with insulin/carbs (out of
+    ``n_patients``); ``mean_delta`` is the mean over patients of (insulin/carbs - glucose-only),
+    so negative means insulin/carbs helps. The per-seed columns show whether the conclusion
+    holds seed by seed: ``delta_seed_mean`` / ``delta_seed_std`` are over the per-seed
+    cross-patient mean differences, ``improved_per_seed`` lists n_improved for each seed."""
+    glu, ins = runs[runs["model"] == GLUCOSE_LABEL], runs[runs["model"] == INSULIN_LABEL]
+    rows = []
+    if not glu.empty and not ins.empty:
+        for horizon in sorted(glu["horizon_min"].unique()):
+            for cohort in _cohorts(cfg):
+                g = _subset(glu[glu["horizon_min"] == horizon], cohort)
+                i = _subset(ins[ins["horizon_min"] == horizon], cohort)
+                seeds = sorted(set(g["seed"]) & set(i["seed"]))
+                if not seeds:
+                    continue
+                g, i = g[g["seed"].isin(seeds)], i[i["seed"].isin(seeds)]
+                avg = i.groupby("patient")["rmse"].mean() - g.groupby("patient")["rmse"].mean()
+                per_seed = [i[i["seed"] == sd].set_index("patient")["rmse"] - g[g["seed"] == sd].set_index("patient")["rmse"]
+                            for sd in seeds]
+                means = np.array([d.mean() for d in per_seed])
+                rows.append({
+                    "horizon_min": horizon, "cohort": cohort, "n_patients": len(avg), "n_seeds": len(seeds),
+                    "n_improved": int((avg < 0).sum()), "mean_delta_rmse": avg.mean(),
+                    "delta_seed_mean": means.mean(), "delta_seed_std": means.std(ddof=1) if len(means) > 1 else np.nan,
+                    "improved_per_seed": ",".join(str(int((d < 0).sum())) for d in per_seed),
+                })
+    table = pd.DataFrame(rows)
+    table.to_csv(_results_dir(cfg) / "ablation_insulin_carbs.csv", index=False)
+    return table
+
+
+def write_ablation_per_patient(cfg: dict, seed_avg: pd.DataFrame) -> pd.DataFrame | None:
+    """Per patient: seed-averaged RMSE of both LSTM variants and their difference, next to how
+    densely each patient logged meals and boluses (events per day, from the data-quality report,
+    for the training and the test file). Purely descriptive: no test is applied to the columns."""
+    out = _results_dir(cfg)
+    quality_path = out / "data_quality.csv"
+    if not quality_path.exists():
+        return None
+    q = pd.read_csv(quality_path)
+    if "meals_per_day" not in q:  # report predates the event-count columns
+        return None
+    logging = q.pivot(index="patient", columns="split", values=["meals_per_day", "boluses_per_day"])
+    logging.columns = [f"{metric}_{split}" for metric, split in logging.columns]
+    rmse = seed_avg.pivot_table(index=["horizon_min", "patient", "cohort"], columns="model", values="rmse")
+    if GLUCOSE_LABEL not in rmse or INSULIN_LABEL not in rmse:
+        return None
+    table = rmse[[GLUCOSE_LABEL, INSULIN_LABEL]].rename(
+        columns={GLUCOSE_LABEL: "glucose_only_rmse", INSULIN_LABEL: "insulin_carbs_rmse"}).reset_index()
+    table["delta_rmse"] = table["insulin_carbs_rmse"] - table["glucose_only_rmse"]
+    table["improved"] = table["delta_rmse"] < 0
+    table = table.merge(logging.reset_index(), on="patient").sort_values(["horizon_min", "cohort", "patient"])
+    table.round(3).to_csv(out / "ablation_per_patient.csv", index=False)
+    return table
 
 
 def write_coverage(cfg: dict, horizons: tuple[int, ...]) -> pd.DataFrame:
@@ -163,18 +271,18 @@ def evaluate_checkpoint(cfg: dict, checkpoint: str | Path, name: str) -> pd.Data
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Evaluate a checkpoint on the test files.")
+    parser = argparse.ArgumentParser(description="Evaluate a checkpoint on the test files and refresh the tables.")
     parser.add_argument("--config", required=True)
-    parser.add_argument("--checkpoint", required=True)
+    parser.add_argument("--checkpoint", help="omit to only rebuild the comparison tables from existing results")
     args = parser.parse_args()
     cfg = load_config(args.config)
-    evaluate_checkpoint(cfg, args.checkpoint, Path(args.config).stem)
+    if args.checkpoint:
+        evaluate_checkpoint(cfg, args.checkpoint, Path(args.checkpoint).stem)  # run name = checkpoint name
     summary = write_comparison(cfg)
     h = cfg["window"]["horizon"] * cfg["grid"]["step_min"]
     shown = summary[summary["horizon_min"] == h].copy()
     shown["RMSE"] = shown.rmse_mean.round(2).astype(str) + " ± " + shown.rmse_std.round(2).astype(str)
-    shown["MAE"] = shown.mae_mean.round(2).astype(str) + " ± " + shown.mae_std.round(2).astype(str)
-    print(shown[["cohort", "model", "n_patients", "RMSE", "MAE"]].to_string(index=False))
+    print(shown[["cohort", "model", "n_patients", "n_seeds", "RMSE"]].to_string(index=False))
 
 
 if __name__ == "__main__":

@@ -81,8 +81,12 @@ def train(cfg: dict, name: str) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train a forecasting model.")
     parser.add_argument("--config", required=True)
+    parser.add_argument("--seed", type=int, help="override the config seed; run is named <config>_seed<N>")
     args = parser.parse_args()
-    train(load_config(args.config), Path(args.config).stem)
+    cfg, name = load_config(args.config), Path(args.config).stem
+    if args.seed is not None:
+        cfg["seed"], name = args.seed, f"{name}_seed{args.seed}"
+    train(cfg, name)
 
 
 if __name__ == "__main__":

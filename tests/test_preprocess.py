@@ -70,6 +70,7 @@ def test_events_outside_cgm_span_are_dropped_and_counted():
     bolus = pd.DataFrame({"ts_begin": [ts(500)], "ts_end": [ts(500)], "type": ["normal"], "dose": [1.0]})
     grid, stats = build_grid(tables(steady_glucose(), meal=meal, bolus=bolus))
     assert stats["meal_outside_grid"] == 1 and stats["bolus_outside_grid"] == 1
+    assert stats["meals_in_grid"] == 1 and stats["boluses_in_grid"] == 0  # counts exclude dropped events
     assert grid["carbs"].sum() == 20 and grid["bolus"].sum() == 0
 
 

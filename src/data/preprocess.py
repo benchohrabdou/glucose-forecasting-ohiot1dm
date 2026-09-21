@@ -154,6 +154,10 @@ def build_grid(
         "cgm_collisions": collisions,
         "bolus_outside_grid": bolus_out,
         "meal_outside_grid": meal_out,
+        # Logged events that fall inside the grid (all meal types incl. HypoCorrection; every bolus
+        # type). Counts, not doses: used for the meals/day and boluses/day data-quality columns.
+        "meals_in_grid": len(tables["meal"]) - meal_out,
+        "boluses_in_grid": len(tables["bolus"]) - bolus_out,
         "basal_unknown_bins": basal_unknown,
         "final_basal_rate": final_rate,
     }

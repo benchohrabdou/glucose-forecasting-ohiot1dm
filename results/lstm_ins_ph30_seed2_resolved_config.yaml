@@ -1,4 +1,4 @@
-seed: 42
+seed: 2
 paths:
   data_root: data/raw
   processed_dir: data/processed
@@ -24,13 +24,13 @@ grid:
 gap:
   max_interp_gap_min: 30
 features:
-  insulin_carbs: false
+  insulin_carbs: true
   time_of_day: false
 split:
   val_frac: 0.2
 window:
   window_len: 12
-  horizon: 12
+  horizon: 6
   max_imputed_frac: 0.25
 model:
   type: lstm

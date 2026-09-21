@@ -1,4 +1,4 @@
-seed: 42
+seed: 4
 paths:
   data_root: data/raw
   processed_dir: data/processed
