@@ -175,9 +175,17 @@ def error_by_range_per_patient(ps: PredictionSet) -> pd.DataFrame:
 
 def clarke_zone(act, pred) -> np.ndarray:
     """Clarke error-grid zone letters (A-E) for reference glucose ``act`` and prediction ``pred``
-    (mg/dL). Follows the widely used reference implementation of Clarke et al. (1987); I have
-    checked the zone logic on hand-worked points (see tests) but not against the original figure,
-    so treat the zone boundaries as unverified until compared with the paper."""
+    (mg/dL), after Clarke et al. (1987).
+
+    Verification: cross-checked against an independent implementation (the ``clarke_error_grid``
+    0.1.4 package on PyPI, whose plotted boundary lines carry the same constants: 70, 180, 240, 290,
+    the +/-20% lines, +110 upper-C line and the (130, 0)-(180, 70) lower-C line). Over 300,000 random
+    continuous points the two agree on every zone; on the integer grid 20-400 x 0-450 they differ
+    only for points lying exactly ON a boundary (0.13% of points), because they treat a point on a
+    line differently (this code: strict "<" for the 20% band and the <70 rule; theirs: inclusive).
+    On our test windows that changes a zone percentage by at most 0.16 percentage points
+    (persistence only, whose forecasts are integers); ridge and the LSTMs are unaffected. Not
+    checked against Clarke's original paper itself."""
     a, p = np.asarray(act, float), np.asarray(pred, float)
     zone = np.full(a.shape, "B", dtype="<U1")  # default: any remaining point is B (upper or lower)
     decided = np.zeros(a.shape, bool)

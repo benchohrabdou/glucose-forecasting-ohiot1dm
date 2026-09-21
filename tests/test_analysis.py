@@ -36,6 +36,37 @@ def test_clarke_zone_on_hand_worked_points(act, pred, zone):
     assert clarke_zone([act], [pred])[0] == zone
 
 
+@pytest.mark.parametrize("act,pred,zone", [
+    # just either side of each boundary line of the Clarke grid
+    (100, 119.9, "A"), (100, 120.1, "B"), (100, 80.1, "A"), (100, 79.9, "B"),   # the +/-20% lines
+    (69.9, 69.9, "A"), (100, 69.9, "B"),                                       # both <70 is A; else the 20% rule
+    (60, 71.9, "A"), (60, 72.1, "D"), (60, 179.9, "D"), (60, 180.1, "E"),      # left: within 20%, then D up to 180, E above
+    (250, 179.9, "D"), (250, 180.1, "B"), (250, 70.1, "D"), (250, 69.9, "E"),  # right: D for pred 70-180, E below 70
+    (239, 120, "B"),                                                           # right-D needs act >= 240
+    (100, 209.9, "B"), (100, 210.1, "C"), (300, 420, "B"),                     # upper C: pred >= act+110, act <= 290
+    (150, 28.1, "B"), (150, 27.9, "C"), (129, 0, "B"),                         # lower C line through (130,0)-(180,70)
+    (181, 69.9, "E"), (179, 60, "C"),                                          # right E needs act >= 180
+])
+def test_clarke_zone_just_either_side_of_each_boundary(act, pred, zone):
+    assert clarke_zone([act], [pred])[0] == zone
+
+
+def test_clarke_matches_the_independent_geometry_on_a_dense_continuous_grid():
+    """Zone areas from the independent implementation's boundary lines (70, 180, 240, 290, 20%, +110,
+    7/5*act-182) re-derived here point by point; agreement is total away from the lines."""
+    rng = np.random.default_rng(0)
+    a, p = rng.uniform(20, 400, 50_000), rng.uniform(0, 450, 50_000)
+
+    def by_geometry(x, y):
+        if (x < 70 and y < 70) or 0.8 * x < y < 1.2 * x: return "A"
+        if (x >= 180 and y <= 70) or (x <= 70 and y >= 180): return "E"
+        if (70 <= x <= 290 and y >= x + 110) or (130 <= x <= 180 and y <= 1.4 * x - 182): return "C"
+        if (x >= 240 and 70 <= y <= 180) or (x <= 70 and 70 <= y <= 180): return "D"
+        return "B"
+
+    assert (clarke_zone(a, p) == np.array([by_geometry(x, y) for x, y in zip(a, p)])).all()
+
+
 def make_ps(n=40, seeds=(0,)):
     y = np.r_[np.full(10, 50.0), np.full(20, 120.0), np.full(10, 250.0)]
     meta = pd.DataFrame({"patient": np.repeat([1, 2], n // 2), "target_ts": T0 + pd.to_timedelta(np.arange(n) * 5, "m"),
