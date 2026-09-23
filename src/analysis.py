@@ -6,6 +6,9 @@ Writes to results/ (aggregate tables) and results/figures/:
   lag_and_anticipation.csv does a model anticipate changes, or repeat the last value later?
   lag_curves.csv           RMSE as a function of the lag between forecast and glucose
   residual_summary.csv     bias / spread / tails of the errors
+  calibration_reverse_slope.csv  actual change regressed on predicted change
+  hypo_detection.csv       sensitivity / precision of "forecast < 70 / 80 / 90" for "actual < 70"
+  forecast_spread.csv      spread of forecasts vs actual glucose; share of forecasts below 70
 
 ``python -m src.analysis --config configs/base.yaml [--rebuild]``
 
@@ -249,8 +252,12 @@ def lag_and_anticipation(ps: PredictionSet, cfg: dict, lookup) -> tuple[pd.DataF
     (its own age); one that anticipates matches best nearer s = 0.
 
     Anticipation: delta_pred = pred - last input, delta_act = actual - last input; correlation,
-    OLS slope (0 = repeats the last value, 1 = tracks changes fully) and the share of large
-    moves (>= LARGE_MOVE mg/dL) whose direction is right. Persistence has delta_pred = 0."""
+    OLS slope of delta_pred on delta_act (``delta_slope``) and the share of large moves
+    (>= LARGE_MOVE mg/dL) whose direction is right. Persistence has delta_pred = 0.
+    CAUTION: ``delta_slope`` (predicted change regressed on the ACTUAL change) is below 1 even for a
+    perfectly calibrated forecaster, because conditioning on the outcome selects windows where the
+    forecast was more moderate; do not read it as timidity. The calibration check is the reverse
+    regression in ``reverse_slope_table``."""
     step = cfg["grid"]["step_min"]
     h = ps.horizon_min // step
     n_lags = h + LAG_EXTRA_STEPS
@@ -294,6 +301,73 @@ def residual_summary(ps: PredictionSet) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+# ------------------------------------------------------------------ calibration and hypo detection
+
+def reverse_slope_table(ps: PredictionSet, cfg: dict) -> pd.DataFrame:
+    """Calibration check on changes: regress the ACTUAL change (actual - last input) on the PREDICTED
+    change (forecast - last input). Slope 1 with intercept 0 means that, on average, a predicted change
+    of d mg/dL is followed by an actual change of d. (The forward slope in the lag table regresses the
+    predicted change on the actual change; that slope is below 1 even for a well-calibrated forecaster,
+    because conditioning on the actual outcome selects windows where the forecast was too moderate.)
+    Persistence predicts no change, so its slope is undefined (NaN). Seed-averaged for the LSTMs."""
+    y, last, rows = ps.meta["y"].to_numpy(), ps.meta["last"].to_numpy(), []
+    for cohort, cm in _cohort_masks(ps, cfg).items():
+        for model in MODELS:
+            def fit(p, cm=cm):
+                dp, da = (p - last)[cm], (y - last)[cm]
+                if dp.std() == 0:
+                    return {"reverse_slope": np.nan, "reverse_intercept": np.nan, "corr": np.nan}
+                slope, intercept = np.polyfit(dp, da, 1)
+                return {"reverse_slope": float(slope), "reverse_intercept": float(intercept),
+                        "corr": float(np.corrcoef(dp, da)[0, 1])}
+            rows.append({"horizon_min": ps.horizon_min, "cohort": cohort, "model": model, "n_windows": int(cm.sum()),
+                         **_seed_avg(ps, model, fit)})
+    return pd.DataFrame(rows)
+
+
+ALERT_THRESHOLDS = (70.0, 80.0, 90.0)  # forecast values below which an alert would be raised (mg/dL)
+
+
+def hypo_detection(ps: PredictionSet, cfg: dict, thresholds=ALERT_THRESHOLDS) -> pd.DataFrame:
+    """How well does "forecast < threshold" identify an actual value below 70 mg/dL?
+
+    The event is always actual < 70 (HYPO); only the alert threshold on the forecast varies.
+    sensitivity = P(alert | actual < 70) = TP / (TP + FN); precision = P(actual < 70 | alert) =
+    TP / (TP + FP). Counts are windows, pooled over patients (the LSTMs' counts and rates are
+    averaged over seeds). For persistence the forecast is the last input value."""
+    y, rows = ps.meta["y"].to_numpy(), []
+    actual = y < HYPO
+    for cohort, cm in _cohort_masks(ps, cfg).items():
+        for threshold in thresholds:
+            for model in MODELS:
+                def stats(p, cm=cm, threshold=threshold):
+                    alert = p < threshold
+                    tp, fp = int((alert & actual & cm).sum()), int((alert & ~actual & cm).sum())
+                    fn = int((~alert & actual & cm).sum())
+                    return {"tp": tp, "fp": fp, "fn": fn,
+                            "sensitivity": tp / (tp + fn) if tp + fn else np.nan,
+                            "precision": tp / (tp + fp) if tp + fp else np.nan}
+                rows.append({"horizon_min": ps.horizon_min, "cohort": cohort, "alert_threshold": threshold,
+                             "model": model, "n_actual_hypo": int((actual & cm).sum()), **_seed_avg(ps, model, stats)})
+    return pd.DataFrame(rows)
+
+
+def forecast_spread(ps: PredictionSet) -> pd.DataFrame:
+    """Spread of the forecasts versus the spread of the actual target values (all scored windows),
+    and how often each falls below 70 mg/dL. A conditional-mean forecast is expected to be less
+    spread out than the glucose it predicts; persistence, a real past reading, is not."""
+    y = ps.meta["y"].to_numpy()
+    rows = []
+    for model in MODELS:
+        s = _seed_avg(ps, model, lambda p: {"sd_forecast": float(np.std(p)),
+                                             "pct_forecast_below_70": 100 * float(np.mean(p < HYPO)),
+                                             "pct_forecast_above_180": 100 * float(np.mean(p > HYPER))})
+        rows.append({"horizon_min": ps.horizon_min, "model": model, "n_windows": len(y), **s,
+                     "sd_actual": float(np.std(y)), "pct_actual_below_70": 100 * float(np.mean(y < HYPO)),
+                     "pct_actual_above_180": 100 * float(np.mean(y > HYPER))})
+    return pd.DataFrame(rows)
+
+
 # ------------------------------------------------------------------ representative window
 
 def representative_window(ps: PredictionSet, span: int = 96, model: str = INSULIN_LABEL, seed: int = 0):
@@ -334,7 +408,7 @@ def main() -> None:
     lookup = observed_lookup(cfg)
 
     sets = {h: load_or_build(cfg, h, args.rebuild) for h in (6, 12)}
-    tables = {"range": [], "range_pp": [], "clarke": [], "lag": [], "curves": [], "resid": []}
+    tables = {"range": [], "range_pp": [], "clarke": [], "lag": [], "curves": [], "resid": [], "calib": [], "hypo": [], "spread": []}
     for ps in sets.values():
         h = ps.horizon_min // cfg["grid"]["step_min"]
         tables["range"].append(error_by_range(ps, cfg))
@@ -343,8 +417,12 @@ def main() -> None:
         lag, curves = lag_and_anticipation(ps, cfg, lookup)
         tables["lag"].append(lag), tables["curves"].append(curves)
         tables["resid"].append(residual_summary(ps))
+        tables["calib"].append(reverse_slope_table(ps, cfg))
+        tables["hypo"].append(hypo_detection(ps, cfg))
+        tables["spread"].append(forecast_spread(ps))
     files = {"range": "error_by_range", "range_pp": "error_by_range_per_patient", "clarke": "clarke_zones",
-             "lag": "lag_and_anticipation", "curves": "lag_curves", "resid": "residual_summary"}
+             "lag": "lag_and_anticipation", "curves": "lag_curves", "resid": "residual_summary",
+             "calib": "calibration_reverse_slope", "hypo": "hypo_detection", "spread": "forecast_spread"}
     result = {k: pd.concat(v, ignore_index=True) for k, v in tables.items()}
     for k, name in files.items():
         result[k].round(4).to_csv(out / f"{name}.csv", index=False)

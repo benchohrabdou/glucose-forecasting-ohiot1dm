@@ -1,16 +1,18 @@
 # Blood glucose forecasting on OhioT1DM
 
-Forecast a Type 1 diabetes patient's continuous-glucose-monitor (CGM) reading **30 and 60 minutes ahead** from the last hour of CGM data plus insulin and carbohydrate history, using the OhioT1DM dataset. The evaluation follows the OhioT1DM Blood Glucose Level Prediction (BGLP) Challenge convention (RMSE in mg/dL per patient) so results can be set beside the published literature. The point of the repository is a **leak-free, reproducible evaluation protocol**; model sophistication is secondary.
+Forecast a Type 1 diabetes patient's continuous-glucose-monitor (CGM) reading **30 and 60 minutes ahead** from the last hour of CGM data plus insulin and carbohydrate history, using the OhioT1DM dataset. It reports the metric of the OhioT1DM Blood Glucose Level Prediction (BGLP) Challenge (RMSE in mg/dL, mean of per-patient RMSE) so results can be set beside the published literature, with two documented differences from the official protocol (see [Comparability](#comparability-with-the-official-bglp-rules)). The point of the repository is a **leak-free, reproducible evaluation protocol**; model sophistication is secondary.
 
-**Headline.** A small LSTM trained on glucose alone reaches 19.03 ± 2.11 mg/dL RMSE at 30 min and 32.57 ± 3.65 at 60 min across the 12 patients, beating both persistence (23.40 / 38.44) and ridge regression (20.23 / 34.22). Adding insulin and carbohydrate history helps a little more. The main weakness is that the model **shrinks its forecasts toward the middle of the range, so it is no better than persistence in hypoglycemia**, the clinically important case (see [Main limitation](#43-main-limitation-forecasts-shrink-toward-the-mean)).
+**Headline.** On the 2020 cohort (6 patients), a small LSTM trained on glucose plus insulin and carbohydrate history reaches 18.64 ± 2.55 mg/dL RMSE at 30 min and 32.40 ± 4.47 at 60 min (mean of per-patient RMSE), against 24.22 / 40.34 for persistence and 20.20 / 35.15 for ridge regression. The same LSTM on glucose alone reaches 19.26 / 33.83; over all 12 patients the two LSTMs reach 19.03 / 32.57 (glucose only) and 18.56 / 31.70 (with insulin/carbs). The main limitation is that the models' point forecasts **rarely fall below 70 mg/dL, so they cannot flag hypoglycemia at the standard threshold, and at 60 minutes they essentially never do** (see [Main limitation](#43-main-limitation-the-point-forecasts-rarely-cross-the-hypoglycemia-threshold)).
+
+**Intended use.** This is a candidate forecasting component for a diabetes-management app; it is a research prototype and has **not been clinically validated**.
 
 ---
 
 ## 1. Data and handling rules
 
-OhioT1DM has two cohorts of 6 patients each (2018 release: 559, 563, 570, 575, 588, 591; 2020 release: 540, 544, 552, 567, 584, 596). Each patient has an ~8-week training file and a test file covering roughly the final 10 days, chronologically after the training file. The dataset is distributed under a **Data Use Agreement**:
+OhioT1DM [1] has two cohorts of 6 patients each (2018 release: 559, 563, 570, 575, 588, 591; 2020 release: 540, 544, 552, 567, 584, 596). Each patient has an ~8-week training file and a test file covering roughly the final 10 days, chronologically after the training file. The dataset is distributed under a **Data Use Agreement**:
 
-- Raw data is never committed (`data/` is gitignored) and never leaves the local machine.
+- Raw data is gitignored (`data/`) and is never committed or published.
 - Everything published here is aggregate: counts, error metrics and aggregate figures. **No raw patient trace is published**, including per-patient prediction traces.
 - The data root is a config field (`paths.data_root`); no absolute path is hardcoded.
 
@@ -58,7 +60,7 @@ Each patient file becomes a regular 5-minute grid with columns `glucose`, `gluco
 | Persistence | Last observed glucose value. |
 | Linear extrapolation | Slope over the last k readings (k = 6, the largest of {2, 3, 4, 6}, chosen on validation), extrapolated forward. |
 | Ridge | On the flattened window; penalty chosen on validation. |
-| LSTM | 2 layers, hidden size 64, dropout 0.2, final hidden state → linear head. MSE loss, Adam (1e-3), gradient clipping, early stopping on validation RMSE (patience 10) with best-weights restore. Trained twice: on glucose only, and on glucose + insulin + carbs. |
+| LSTM [4] | 2 layers, hidden size 64, dropout 0.2, final hidden state → linear head. MSE loss, Adam (1e-3), gradient clipping, early stopping on validation RMSE (patience 10) with best-weights restore. Trained twice: on glucose only, and on glucose + insulin + carbs. |
 
 A Transformer (optional in the plan) was **not implemented**.
 
@@ -73,7 +75,7 @@ python -m src.run_seeds --configs configs/lstm_ph30.yaml configs/lstm_ph60.yaml 
         configs/lstm_ins_ph30.yaml configs/lstm_ins_ph60.yaml --seeds 0 1 2 3 4
 python -m src.evaluate --config configs/base.yaml             # rebuild comparison tables
 python -m src.analysis --config configs/base.yaml             # range / lag / Clarke / figures
-python -m pytest                                              # 99 tests
+python -m pytest                                              # 104 tests
 ```
 
 Single runs: `python -m src.train --config configs/lstm_ph30.yaml --seed 0`, then `python -m src.evaluate --config configs/lstm_ph30.yaml --checkpoint checkpoints/lstm_ph30_seed0.pt`.
@@ -84,31 +86,59 @@ The tests cover parsing, grid alignment, the gap policy, the leakage rules (targ
 
 ## 4. Results
 
-All numbers are RMSE / MAE in **mg/dL**, on the test files. "±" is the standard deviation across patients of each patient's (seed-averaged) error. **The published-benchmark column is intentionally empty**; the numbers and citations are to be filled in by the project owner from the papers. Comparisons with published work should be made carefully: preprocessing and window-rejection rules differ between papers, and this repository's rules have not been checked against the challenge's.
+All numbers are RMSE / MAE in **mg/dL**, on the test files. "±" is the standard deviation across patients of each patient's (seed-averaged) error. **These numbers are not directly comparable with published BGLP results**: two specific differences from the official protocol are listed under [Comparability](#comparability-with-the-official-bglp-rules) below.
 
 ### 4.1 Headline results
 
 **2020 cohort** (540, 544, 552, 567, 584, 596), the cohort BGLP papers report on:
 
-| Model | 30 min RMSE | 30 min MAE | 60 min RMSE | 60 min MAE | Published BGLP RMSE, 30 / 60 min |
-|---|---|---|---|---|---|
-| Persistence | 24.22 ± 3.26 | 17.57 ± 2.46 | 40.34 ± 5.57 | 29.79 ± 4.34 |  |
-| Linear extrapolation (k=6) | 27.26 ± 3.50 | 18.87 ± 2.62 | 56.63 ± 8.19 | 40.05 ± 6.13 |  |
-| Ridge (α=10) | 20.20 ± 2.51 | 14.74 ± 1.81 | 35.15 ± 4.70 | 26.64 ± 3.47 |  |
-| LSTM, glucose only | 19.26 ± 2.50 | 13.80 ± 1.77 | 33.83 ± 4.57 | 25.32 ± 3.38 |  |
-| LSTM, glucose + insulin/carbs | 18.64 ± 2.55 | 13.38 ± 1.79 | 32.40 ± 4.47 | 24.21 ± 3.25 |  |
+| Model | 30 min RMSE | 30 min MAE | 60 min RMSE | 60 min MAE |
+|---|---|---|---|---|
+| Persistence | 24.22 ± 3.26 | 17.57 ± 2.46 | 40.34 ± 5.57 | 29.79 ± 4.34 |
+| Linear extrapolation (k=6) | 27.26 ± 3.50 | 18.87 ± 2.62 | 56.63 ± 8.19 | 40.05 ± 6.13 |
+| Ridge (α=10) | 20.20 ± 2.51 | 14.74 ± 1.81 | 35.15 ± 4.70 | 26.64 ± 3.47 |
+| LSTM, glucose only | 19.26 ± 2.50 | 13.80 ± 1.77 | 33.83 ± 4.57 | 25.32 ± 3.38 |
+| LSTM, glucose + insulin/carbs | 18.64 ± 2.55 | 13.38 ± 1.79 | 32.40 ± 4.47 | 24.21 ± 3.25 |
 
 **All 12 patients:**
 
-| Model | 30 min RMSE | 30 min MAE | 60 min RMSE | 60 min MAE | Published BGLP RMSE, 30 / 60 min |
-|---|---|---|---|---|---|
-| Persistence | 23.40 ± 2.91 | 16.96 ± 2.07 | 38.44 ± 4.79 | 28.53 ± 3.51 |  |
-| Linear extrapolation (k=6) | 27.33 ± 4.05 | 18.51 ± 2.48 | 55.32 ± 7.92 | 38.62 ± 5.51 |  |
-| Ridge (α=10) | 20.23 ± 2.35 | 14.48 ± 1.54 | 34.22 ± 3.73 | 25.76 ± 2.88 |  |
-| LSTM, glucose only | 19.03 ± 2.11 | 13.47 ± 1.49 | 32.57 ± 3.65 | 24.21 ± 2.79 |  |
-| LSTM, glucose + insulin/carbs | 18.56 ± 2.18 | 13.13 ± 1.47 | 31.70 ± 3.47 | 23.50 ± 2.61 |  |
+| Model | 30 min RMSE | 30 min MAE | 60 min RMSE | 60 min MAE |
+|---|---|---|---|---|
+| Persistence | 23.40 ± 2.91 | 16.96 ± 2.07 | 38.44 ± 4.79 | 28.53 ± 3.51 |
+| Linear extrapolation (k=6) | 27.33 ± 4.05 | 18.51 ± 2.48 | 55.32 ± 7.92 | 38.62 ± 5.51 |
+| Ridge (α=10) | 20.23 ± 2.35 | 14.48 ± 1.54 | 34.22 ± 3.73 | 25.76 ± 2.88 |
+| LSTM, glucose only | 19.03 ± 2.11 | 13.47 ± 1.49 | 32.57 ± 3.65 | 24.21 ± 2.79 |
+| LSTM, glucose + insulin/carbs | 18.56 ± 2.18 | 13.13 ± 1.47 | 31.70 ± 3.47 | 23.50 ± 2.61 |
 
 Across the five seeds, the cross-patient mean RMSE of each LSTM varies by only 0.04-0.13 mg/dL, far below the gaps between models. Per-patient tables are in `results/comparison_per_patient.csv`; all summaries in `results/comparison_summary.csv`. The glucose-only LSTM beats ridge and persistence for every one of the 12 patients at both horizons.
+
+#### Comparability with the official BGLP rules
+
+The official BGLP evaluation rules [2] (<https://webpages.charlotte.edu/rbunescu/data/ohiot1dm/bglp/bglp-rules.html>) apply to the 2020 cohort. Where our pipeline can be checked against them it complies: **no interpolation anywhere** (missing glucose is handled by causal forward-fill, i.e. extrapolation, which the rules allow; interpolation is forbidden), results reported on the **2020 cohort**, and the headline metric is the **mean of per-patient RMSE** (and MAE) at 30 and 60 minutes. Two differences remain, and both mean the numbers above should not be set directly beside published ones:
+
+**1. We score fewer test points than the challenge.** The rules start the evaluation points 60 minutes after the start of each test file and score the test points from there. The official counts equal our number of real CGM readings in each test file minus the first 12 (60 minutes), for all six patients, so our parsing reproduces the official reading counts exactly. But we also drop windows whose input contains a gap the forward-fill does not cover (or more than 25% forward-filled bins), so we score a subset:
+
+| Patient | Official scored points | Real CGM readings in our test file | Ours scored, 30 min | Ours scored, 60 min | Ours as % of official (30 / 60 min) |
+|---|---|---|---|---|---|
+| 540 | 2,884 | 2,896 | 2,773 | 2,753 | 96.2% / 95.5% |
+| 544 | 2,704 | 2,716 | 2,639 | 2,615 | 97.6% / 96.7% |
+| 552 | 2,352 | 2,364 | 2,234 | 2,195 | 95.0% / 93.3% |
+| 567 | 2,377 | 2,389 | 2,200 | 2,143 | 92.6% / 90.2% |
+| 584 | 2,653 | 2,665 | 2,435 | 2,408 | 91.8% / 90.8% |
+| 596 | 2,731 | 2,743 | 2,624 | 2,597 | 96.1% / 95.1% |
+| **All six** | **15,701** | **15,773** | **14,905** | **14,711** | **94.9% / 93.7%** |
+
+Our scored set is 90.2%-97.6% of the official set per patient. **We have not measured how the models score on the points we drop**, so the effect on RMSE could go either way; the omitted points are those whose preceding hour contains a substantial CGM gap (a run the 30-minute forward-fill cannot cover, or shorter gaps that leave more than 25% of the input forward-filled).
+
+**2. Our model does not follow the rules' offline definition.** The rules describe an offline model as one model per patient, trained and tuned on the provided training data (pre-training on the 2018 cohort is allowed). Ours is a **single population model**: one set of weights trained on all 12 patients' training data and then evaluated per patient, with **no per-patient training or fine-tuning**. Matching the official definition would require one model per patient (optionally pre-trained on the 2018 cohort), which is listed under future work.
+
+#### Published BGLP 2020 results
+
+*Placeholder: to be added by the project owner, with citations. Suggested columns: published RMSE (30 and 60 min, mean over the six 2020 patients), whether the method is offline or online, and whether it was pre-trained on the 2018 cohort.*
+
+| Method (citation) | Offline / online | Pre-trained on 2018? | 30 min RMSE | 60 min RMSE |
+|---|---|---|---|---|
+| *to be filled* | | | | |
 
 ### 4.2 Does insulin and carbohydrate history help?
 
@@ -126,7 +156,7 @@ The same LSTM trained with insulin and carbs added as inputs, compared with the 
 - At 30 min, 11 of 12 patients improve; at 60 min, 9 of 12. Every 2020 patient improves at both horizons.
 - The average gain is modest (about 2.5% of RMSE) but far outside the seed-to-seed variation.
 - Single-seed counts are unstable (at 30 min, from 8 to 12 of 12 depending on the seed), which is why the seed-averaged count is the one to quote.
-- As a rough guide to strength, an exact sign test gives two-sided p ≈ 0.006 for 11 of 12 and ≈ 0.15 for 9 of 12. The 60-min all-patient result is therefore not decisive by itself; it rests mostly on the 2020 cohort.
+- As a **descriptive guide** to strength (not a formal test, and with no correction for looking at several cohorts and horizons), an exact two-sided sign test on these counts gives p ≈ 0.006 for 11 of 12 and p ≈ 0.15 for 9 of 12. The 60-min all-patient result is therefore not decisive by itself; it rests mostly on the 2020 cohort.
 - The patients that do not improve are all from the 2018 cohort (563 at both horizons; also 575 and 591 at 60 min).
 - Patient 567's test file contains no meal records, yet it improves at both horizons, so at least part of the benefit comes from insulin. The two are not separated in this experiment.
 
@@ -137,9 +167,38 @@ For context, **logging density** (events per day, from `results/data_quality.csv
 | 2018 (median of 6) | 4.2 | 3.5 | 5.0 | 4.6 |
 | 2020 (median of 6) | 2.0 | 2.4 | 6.2 | 5.3 |
 
-### 4.3 Main limitation: forecasts shrink toward the mean
+### 4.3 Main limitation: the point forecasts rarely cross the hypoglycemia threshold
 
-The headline numbers hide a systematic weakness. Split by the **actual** glucose range, the LSTMs improve on persistence in the in-range and high ranges but **not in hypoglycemia**:
+The LSTMs beat persistence on overall RMSE (Section 4.1), and their forecasts are calibrated in size and direction (below). But their point forecasts seldom fall below 70 mg/dL, so **they cannot flag lows at the standard threshold, and at 60 minutes they essentially never do.**
+
+**Hypoglycemia detection.** The event is an actual glucose below 70 mg/dL (844 scored readings at 30 min, 841 at 60 min). An alert is raised when the forecast is below the threshold in the second column. Each cell is sensitivity / precision (number of alerts): sensitivity is the share of actual lows that were alerted, precision the share of alerts that were actual lows. Pooled over all 12 patients; LSTMs are seed-averaged. For persistence the forecast is simply the last reading.
+
+| Horizon | Alert if forecast is below | Persistence | Ridge | LSTM glucose | LSTM + insulin/carbs |
+|---|---|---|---|---|---|
+| 30 min | 70 mg/dL | 0.56 / 0.57 (830) | 0.38 / 0.61 (524) | 0.26 / 0.69 (318) | 0.31 / 0.73 (365) |
+| 30 min | 80 mg/dL | 0.78 / 0.37 (1,760) | 0.75 / 0.51 (1,240) | 0.75 / 0.53 (1,184) | 0.76 / 0.53 (1,225) |
+| 30 min | 90 mg/dL | 0.91 / 0.25 (3,019) | 0.93 / 0.32 (2,419) | 0.92 / 0.30 (2,578) | 0.92 / 0.30 (2,562) |
+| 60 min | 70 mg/dL | 0.34 / 0.35 (816) | 0.04 / 0.27 (134) | 0.00 / 0.00 (0) | 0.00 / 0.25 (5) |
+| 60 min | 80 mg/dL | 0.51 / 0.25 (1,743) | 0.14 / 0.26 (448) | 0.01 / 0.36 (23) | 0.05 / 0.44 (107) |
+| 60 min | 90 mg/dL | 0.65 / 0.18 (2,982) | 0.46 / 0.32 (1,206) | 0.32 / 0.36 (741) | 0.41 / 0.36 (962) |
+
+- **At the standard threshold (below 70), the models flag far fewer lows than persistence.** At 30 min sensitivity is 0.26-0.38 for the trained models against 0.56 for persistence, with higher precision (0.61-0.73 against 0.57). At 60 min, against 841 actual lows, the glucose-only LSTM raises 0.2 alerts and the insulin/carbs LSTM 4.8 (averages over the five seeds); persistence catches 34%.
+- **Raising the alert threshold trades precision for sensitivity for every model.** At 30 min, alerting below 80 gives the LSTMs sensitivity 0.75-0.76 (persistence 0.78) with precision 0.53 (persistence 0.37). At 60 min, even alerting below 90 leaves LSTM sensitivity (0.32-0.41) below persistence's (0.65), at about twice its precision (0.36 against 0.18).
+- **These thresholds are illustrative, not tuned.** They were evaluated on the test files; choosing an alert threshold would have to be done on validation data. About 67% of the 844 lows come from four patients (540, 567, 575, 591; see the reading counts below).
+
+**Why the point forecasts rarely dip below 70: an explanation, not a tested result.** A model trained to minimise mean squared error learns a conditional mean, and a conditional mean is less spread out than the quantity it predicts. A low is rarely more likely than not, so the mean forecast seldom goes below 70. Persistence is a real past reading, so it keeps the full spread of glucose. The measurements agree with this: the standard deviation of the LSTM forecasts is 56.6-57.1 mg/dL at 30 min and 50.1-50.4 at 60 min, against 60.5 for actual glucose (persistence: 60.3), and 1.0-1.2% (30 min) and 0.0% (60 min) of LSTM forecasts fall below 70, against 2.8% of actual values (persistence: 2.7%). But no experiment here changes the loss, so the mechanism itself is untested.
+
+**Calibration of changes.** Regressing the actual change (actual minus last reading) on the predicted change (forecast minus last reading) gives a slope of 1 if a predicted change of *d* mg/dL is followed, on average, by an actual change of *d*:
+
+| Model | 30 min: slope (intercept, mg/dL) | 60 min: slope (intercept, mg/dL) |
+|---|---|---|
+| Ridge | 1.02 (+0.6) | 0.96 (+1.4) |
+| LSTM glucose | 1.00 (+0.2) | 0.98 (+0.7) |
+| LSTM + insulin/carbs | 0.98 (+0.3) | 0.96 (+1.4) |
+
+Slopes are 0.96-1.02 with intercepts within about 1.5 mg/dL, so the forecasts are calibrated in size. The direction of large moves (actual changes of at least 10 mg/dL) is right 73-80% of the time (table below). Persistence predicts no change, so it has no slope.
+
+**Error by glycemic range.** Split by the **actual** glucose range, the LSTMs improve on persistence in the in-range and high ranges but not in hypoglycemia:
 
 | Horizon | Actual range | Scored readings | Persistence | Ridge | LSTM glucose | LSTM + insulin/carbs |
 |---|---|---|---|---|---|---|
@@ -152,7 +211,7 @@ The headline numbers hide a systematic weakness. Split by the **actual** glucose
 
 RMSE in mg/dL, all patients pooled (so patients with more readings weigh more; this differs from the patient-averaged tables above). LSTMs are seed-averaged. Scored-reading counts are shown because the hypoglycemic range is small.
 
-The errors are also **one-sided**. Mean error (predicted − actual), mg/dL:
+Mean error (predicted − actual), mg/dL:
 
 | Horizon | Actual range | Scored readings | Persistence | LSTM glucose | LSTM + insulin/carbs |
 |---|---|---|---|---|---|
@@ -163,30 +222,30 @@ The errors are also **one-sided**. Mean error (predicted − actual), mg/dL:
 | 60 min | in range (70–180) | 18,583 | +6.7 | +8.7 | +7.4 |
 | 60 min | hyper (>180) | 10,537 | -14.4 | -20.5 | -20.2 |
 
-In hypoglycemia the forecasts are too high (by about 15 mg/dL at 30 min and 35 at 60 min); in hyperglycemia they are too low. This is the pattern expected when a model is trained to minimise mean squared error: it predicts the conditional *average*, which pulls extreme values toward the middle, and low readings are rare in the training data (about 3% of readings). **This explanation fits the evidence but was not tested** (no experiment here changes the loss). Persistence also has a positive bias in hypoglycemia, which is what one would expect if glucose is usually still falling when a low is reached; this was not checked either.
+**A caution on reading this table.** Splitting windows by the *actual* value produces errors toward the middle for *any* forecaster, even a perfectly calibrated one: among the readings that turn out to be low, a forecast with any uncertainty will on average sit above them, and among those that turn out to be high, below them (a selection effect from conditioning on the outcome). One-sided errors like these are therefore expected in part however the model was trained, and this is also why persistence shows a positive bias in hypoglycemia. The by-range tables show *where* the errors are, not by themselves *why*.
 
 ![RMSE by glycemic range](results/figures/error_by_range.png)
 
-**Lag analysis.** Does the model anticipate changes, or repeat the last value with a delay? The figure below compares each forecast for time *T* with the actual glucose at *T − lag*; a repeat-last-value forecast matches best at a lag equal to the horizon, a perfect forecast at zero.
+**Lag analysis.** The figure compares each forecast for time *T* with the actual glucose at *T − lag*; a repeat-last-value forecast matches best at a lag equal to the horizon, a perfect forecast at zero.
 
 ![Forecast vs actual glucose at different lags](results/figures/lag_curves.png)
 
-| Horizon | Model | Best-matching lag | Slope of predicted vs actual change | Direction right on large moves |
-|---|---|---|---|---|
-| 30 min | Persistence | 30 min | 0 (by construction) | n/a |
-| 30 min | Ridge | 25 min | 0.25 | 76% |
-| 30 min | LSTM glucose | 20 min | 0.34 | 79% |
-| 30 min | LSTM + insulin/carbs | 20 min | 0.38 | 80% |
-| 60 min | Persistence | 60 min | 0 (by construction) | n/a |
-| 60 min | Ridge | 50 min | 0.22 | 69% |
-| 60 min | LSTM glucose | 45 min | 0.29 | 73% |
-| 60 min | LSTM + insulin/carbs | 45 min | 0.34 | 75% |
+| Horizon | Model | Best-matching lag | Direction right on large moves |
+|---|---|---|---|
+| 30 min | Persistence | 30 min (= the horizon, by construction) | n/a |
+| 30 min | Ridge | 25 min | 76% |
+| 30 min | LSTM glucose | 20 min | 79% |
+| 30 min | LSTM + insulin/carbs | 20 min | 80% |
+| 60 min | Persistence | 60 min (= the horizon, by construction) | n/a |
+| 60 min | Ridge | 50 min | 69% |
+| 60 min | LSTM glucose | 45 min | 73% |
+| 60 min | LSTM + insulin/carbs | 45 min | 75% |
 
-Best-matching lag is on the 5-minute grid; the slope compares the predicted change (forecast minus last input) with the actual change, so 0 means the last value is repeated and 1 means changes are tracked fully; "large moves" are actual changes of at least 10 mg/dL (persistence scores 0 there by construction). The LSTMs **do anticipate**: they match the actual trace about 10 min (30-min horizon) and 15 min (60-min horizon) earlier than persistence would, and get the direction of large moves right 73-80% of the time (79-80% at 30 min, 73-75% at 60 min). But they predict only about **a third** of each change, and the insulin/carbs inputs help slightly with this. This is the same shrinkage seen in the range analysis, seen from another angle.
+The best-matching lag is on the 5-minute grid; "large moves" are actual changes of at least 10 mg/dL (persistence is not scored on direction because it predicts no change). The LSTMs match the actual trace about 10 min (30-min horizon) and 15 min (60-min horizon) earlier than persistence would. **This should not be read as evidence that the models are timid:** a conditional-mean forecast of a noisy signal also looks delayed and smoothed relative to it, whatever the model's calibration.
 
-A qualitative look at one 8-hour stretch of one test file (a raw CGM trace, so **not published here** under the Data Use Agreement) suggests the same thing: at 30 min the LSTM forecasts follow the movement of the actual trace with a modest delay at turning points, and persistence looks like a copy of the actual trace shifted by the horizon; at 60 min the LSTM forecasts move earlier than persistence but under-react to the size of large rises and falls. This is an illustration from a single stretch, not evidence.
+For illustration only: in one 8-hour stretch of one test file (a raw CGM trace, so **not published here** under the Data Use Agreement), persistence looks like a copy of the actual trace shifted by the horizon. The LSTM forecasts move earlier than persistence but are visibly more jittery than the CGM trace, and at 60 min they miss the level of the actual trace by tens of mg/dL at times. This is a single stretch, not evidence.
 
-**Clarke error grid.** The share of scored readings in each Clarke zone (higher A + B is safer; zone D is "failure to detect", which includes missed hypoglycemia):
+**Clarke error grid** [3]. The share of scored readings in each Clarke zone (higher A + B is safer; zone D is "failure to detect", which includes missed hypoglycemia):
 
 | Horizon | Model | A | B | C | D | E | A + B |
 |---|---|---|---|---|---|---|---|
@@ -199,29 +258,30 @@ A qualitative look at one 8-hour stretch of one test file (a raw CGM trace, so *
 | 60 min | LSTM glucose | 70.1 | 26.1 | 0.2 | 3.5 | 0.0 | 96.3 |
 | 60 min | LSTM + insulin/carbs | 71.4 | 25.0 | 0.2 | 3.5 | 0.0 | 96.4 |
 
-Zone assignment was cross-checked against an independent implementation (the `clarke_error_grid` package): the two agree on every one of 300,000 random continuous points, and differ only for points lying exactly on a boundary line; on our test windows this changes zone percentages by at most 0.16 percentage points, and only for persistence. It was not checked against Clarke's original paper. The models put more readings in zone A than persistence, but also slightly more in zone D, consistent with the missed-hypoglycemia finding above; persistence has marginally higher A + B at both horizons.
+Zone assignment was cross-checked against an independent implementation (the `clarke_error_grid` package): the two agree on every one of 300,000 random continuous points, and differ only for points lying exactly on a boundary line; on our test windows this changes zone percentages by at most 0.16 percentage points, and only for persistence. It was not checked against Clarke's original paper. The models put more readings in zone A than persistence, but also slightly more in zone D, consistent with the detection results above; persistence has marginally higher A + B at both horizons.
 
 ![Prediction error distributions](results/figures/residual_distributions.png)
 
-**Reading counts matter.** Hypoglycemic readings are about 3% of scored readings. In 5 of 12 patients' test files there are fewer than 30 of them (as few as 3), so patient-level hypoglycemia errors are very noisy and the pooled figure is dominated by a few patients (540, 567, 575, 591). Per-patient tables with counts: `results/error_by_range_per_patient.csv`.
+**Reading counts matter.** Hypoglycemic readings are about 3% of scored readings. In 5 of 12 patients' test files there are fewer than 30 of them (as few as 3), so patient-level hypoglycemia errors are very noisy and the pooled figures are dominated by a few patients (540, 567, 575, 591). Per-patient tables with counts: `results/error_by_range_per_patient.csv`.
 
 ## 5. Limitations
 
 - **Small sample.** 12 patients, about 10 test days each; hypoglycemic events are rare, especially in the test files.
 - **One configuration.** The LSTM was not tuned (hidden size 64 throughout), and a validation-only search was deliberately not run. Results may understate what the architecture can do.
+- **Alert thresholds are illustrative.** The detection table evaluates thresholds of 70, 80 and 90 mg/dL on the test files; none was tuned on validation data, and the hypoglycemic events are few and concentrated in a handful of patients.
 - **Population model only.** No per-patient fine-tuning or personalisation was evaluated.
 - **Self-reported meals.** Carbohydrates are sparse and sometimes mis-timed; one test file (patient 567) has none. Insulin and carbs are not separated in the ablation.
 - **No wearable or life-event signals** (heart rate, sleep, exercise, stress).
 - **Two cohorts with different devices** (pump and band models) pooled into one model; the 2018 cohort gains less from insulin/carbs and the reason was not investigated.
 - **Seeds vs patients.** The across-seed spread measures training noise only; the paired patient counts speak to patient-to-patient consistency, and with 12 patients the statistical power is limited.
-- **Comparability with published results** is unverified (see Results), and the benchmark column is empty by design.
+- **Not directly comparable with published BGLP results.** We score 90-98% of the official test points (windows near gaps are dropped) and use one population model instead of the rules' one-model-per-patient "offline" definition; see Comparability in Section 4.1. Published results will go in a separate table (Section 4.1).
 - **Not a clinical evaluation.** The Clarke analysis compares forecasts with CGM readings; it is not a medical study.
 
 ## 6. Future work
 
-- **Address the hypoglycemia weakness directly.** Try a **weighted loss** (heavier weight, or an asymmetric penalty, for low glucose, where over-prediction is dangerous) or **oversampling of hypoglycemic windows**, and check whether the by-range bias and the lag/slope numbers improve without losing overall RMSE. This would also test the mean-shrinkage explanation above.
-- Quantile or distributional outputs to give calibrated low-glucose risk.
-- Per-patient fine-tuning of the population model.
+- **Quantile or distributional outputs, and alert-threshold tuning.** A conditional mean rarely crosses 70, so alerting should use a quantity that does: for example a lower-quantile forecast or a predicted probability of glucose below 70, with the alert threshold chosen on validation data and then evaluated once on test.
+- **Weighted or asymmetric loss, or oversampling of hypoglycemic windows.** This would push forecasts toward low values when low glucose is plausible, and would **trade overall RMSE for hypoglycemia sensitivity**; both should be reported. It would also test the conditional-mean explanation above.
+- Train **one model per patient** (optionally pre-trained on the 2018 cohort, or fine-tuning the population model per patient), which the official offline definition requires, and score every real reading from 60 minutes in, using extrapolation for windows near gaps, so results can be compared directly with published ones.
 - A small validation-only hyperparameter search (e.g. hidden size 64 vs 128) and a 120-minute input window.
 - The Transformer encoder from the original plan.
 - Separate insulin from carbohydrate contributions in the ablation.
@@ -240,4 +300,9 @@ results/      metrics CSVs and aggregate figures (never raw data)
 
 ## 8. Citations
 
-Dataset and benchmark citations are to be added by the project owner.
+Placeholders: full references to be added by the project owner.
+
+1. Marling & Bunescu (2020), the OhioT1DM dataset. *Full citation to be added.*
+2. OhioT1DM BGLP Challenge evaluation rules: <https://webpages.charlotte.edu/rbunescu/data/ohiot1dm/bglp/bglp-rules.html>. *Access date to be added.*
+3. Clarke et al. (1987), the Clarke error grid. *Full citation to be added.*
+4. Hochreiter & Schmidhuber (1997), Long Short-Term Memory. *Full citation to be added.*

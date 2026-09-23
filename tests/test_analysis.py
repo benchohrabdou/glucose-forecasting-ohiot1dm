@@ -11,6 +11,9 @@ from src.analysis import (
     error_by_range,
     error_by_range_per_patient,
     glycemic_range,
+    forecast_spread,
+    hypo_detection,
+    reverse_slope_table,
     lag_and_anticipation,
     representative_window,
 )
@@ -189,3 +192,71 @@ def test_all_figures_render(tmp_path):
     for name in ("predicted_vs_actual", "residual_distributions", "error_by_range", "lag_curves"):
         f = tmp_path / f"{name}.png"
         assert f.exists() and f.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n" and f.stat().st_size > 5_000
+
+
+# ---- reverse slope (calibration) and hypo detection, hand-computed
+
+def _ps_with(y, last, preds):
+    n = len(y)
+    meta = pd.DataFrame({"patient": 1, "target_ts": T0 + pd.to_timedelta(np.arange(n) * 5, "m"),
+                         "y": np.asarray(y, float), "last": np.asarray(last, float), "cohort": "2018"})
+    full = {(m, 0): np.asarray(last, float).copy() for m in MODELS}
+    full.update({(m, 0): np.asarray(p, float) for m, p in preds.items()})
+    return PredictionSet(30, meta, full)
+
+
+def test_reverse_slope_recovers_a_known_relationship_and_persistence_is_undefined():
+    d = np.array([-20.0, -5.0, 0.0, 10.0, 30.0, 12.0])
+    last = np.full(6, 100.0)
+    y = last + 2 * d + 1                      # actual change = 2 * predicted change + 1
+    ps = _ps_with(y, last, {GLUCOSE_LABEL: last + d})
+    row = reverse_slope_table(ps, {"cohorts": {"2018": [1]}}).query("cohort == 'all'").set_index("model")
+    assert row.loc[GLUCOSE_LABEL, "reverse_slope"] == pytest.approx(2.0)
+    assert row.loc[GLUCOSE_LABEL, "reverse_intercept"] == pytest.approx(1.0)
+    assert row.loc[GLUCOSE_LABEL, "corr"] == pytest.approx(1.0)
+    assert np.isnan(row.loc["persistence", "reverse_slope"])
+
+
+def test_hypo_detection_sensitivity_and_precision_by_hand():
+    #            actual: hypo hypo ok  ok      forecast: <70 ok  <70 ok
+    y = [50, 60, 80, 100]
+    ps = _ps_with(y, [100] * 4, {GLUCOSE_LABEL: [55, 90, 65, 110]})
+    r = hypo_detection(ps, {"cohorts": {"2018": [1]}}).query("cohort == 'all' and alert_threshold == 70").set_index("model").loc[GLUCOSE_LABEL]
+    assert (r["tp"], r["fp"], r["fn"], r["n_actual_hypo"]) == (1, 1, 1, 2)
+    assert r["sensitivity"] == pytest.approx(0.5) and r["precision"] == pytest.approx(0.5)
+
+
+def test_hypo_detection_is_seed_averaged_and_handles_no_predicted_hypo():
+    y = [50, 60, 80, 100]
+    ps = _ps_with(y, [100] * 4, {GLUCOSE_LABEL: [55, 90, 65, 110]})
+    ps.preds[(GLUCOSE_LABEL, 1)] = np.array([55, 65, 90, 110], float)   # second seed: TP=2, FP=0
+    r = hypo_detection(ps, {"cohorts": {"2018": [1]}}).query("cohort == 'all' and alert_threshold == 70") \
+        .set_index("model").loc[GLUCOSE_LABEL]
+    assert r["sensitivity"] == pytest.approx((0.5 + 1.0) / 2) and r["precision"] == pytest.approx((0.5 + 1.0) / 2)
+    none = hypo_detection(_ps_with([50, 60], [100, 100], {}), {"cohorts": {"2018": [1]}}) \
+        .query("cohort == 'all' and alert_threshold == 70 and model == 'persistence'")
+    assert none["sensitivity"].iloc[0] == 0  # forecasts 100, never <70
+    assert np.isnan(none["precision"].iloc[0])  # no predicted hypo
+
+
+def test_raising_the_alert_threshold_trades_precision_for_sensitivity_and_actual_stays_below_70():
+    y = [50, 60, 80, 100]                       # actual hypo: the first two only, at every threshold
+    ps = _ps_with(y, [100] * 4, {GLUCOSE_LABEL: [55, 75, 95, 110]})
+    d = hypo_detection(ps, {"cohorts": {"2018": [1]}}).query("cohort == 'all'")
+    d = d[d["model"] == GLUCOSE_LABEL].set_index("alert_threshold")
+    assert d["n_actual_hypo"].tolist() == [2, 2, 2]
+    assert (d.loc[70.0, "tp"], d.loc[70.0, "fp"], d.loc[70.0, "sensitivity"]) == (1, 0, 0.5)   # only 55 < 70
+    assert (d.loc[80.0, "tp"], d.loc[80.0, "fp"], d.loc[80.0, "sensitivity"]) == (2, 0, 1.0)   # 55 and 75 < 80
+    ps = _ps_with(y, [100] * 4, {GLUCOSE_LABEL: [55, 75, 85, 110]})                            # 85 < 90 is a false alarm
+    d90 = hypo_detection(ps, {"cohorts": {"2018": [1]}}).query("cohort == 'all' and alert_threshold == 90") \
+        .set_index("model").loc[GLUCOSE_LABEL]
+    assert (d90["tp"], d90["fp"], d90["precision"]) == (2, 1, pytest.approx(2 / 3))
+
+
+def test_forecast_spread_reports_sd_and_share_below_70():
+    y = np.array([50.0, 100.0, 150.0, 200.0])
+    ps = _ps_with(y, y, {GLUCOSE_LABEL: np.full(4, 125.0)})     # a constant forecast has zero spread
+    d = forecast_spread(ps).set_index("model")
+    assert d.loc[GLUCOSE_LABEL, "sd_forecast"] == 0 and d.loc[GLUCOSE_LABEL, "pct_forecast_below_70"] == 0
+    assert d.loc["persistence", "sd_forecast"] == pytest.approx(np.std(y)) == pytest.approx(d.loc[GLUCOSE_LABEL, "sd_actual"])
+    assert d.loc["persistence", "pct_forecast_below_70"] == pytest.approx(25.0) == pytest.approx(d.loc["persistence", "pct_actual_below_70"])
