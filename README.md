@@ -138,8 +138,8 @@ Two entries from the 2020 challenge, both on the 2020 cohort:
 
 | System | Approach | 30 min RMSE | 60 min RMSE | Reference |
 |---|---|---|---|---|
-| Bevan & Coenen (2020) | Single non-personalized LSTM (1 layer, 128 hidden units, 30-min history), glucose only | 18.23 ± 2.36 | 31.10 ± 4.05 | [paper17] |
-| Rubin-Falcone, Fox & Wiens (2020) | Residual (N-BEATS-style) forecasting with LSTM blocks; pre-trained on Tidepool + 2018 data, fine-tuned per participant | 18.22 | 31.66 | [paper18] |
+| Bevan & Coenen (2020) | Single non-personalized LSTM (1 layer, 128 hidden units, 30-min history), glucose only | 18.23 ± 2.36 | 31.10 ± 4.05 | [PDF](https://ceur-ws.org/Vol-2675/paper17.pdf) |
+| Rubin-Falcone, Fox & Wiens (2020) | Residual (N-BEATS-style) forecasting with LSTM blocks; pre-trained on Tidepool + 2018 data, fine-tuned per participant | 18.22 | 31.66 | [PDF](https://ceur-ws.org/Vol-2675/paper18.pdf) |
 | **This repo** (LSTM + insulin/carbs) | Single population model, untuned | **18.64 ± 2.55** | **32.40 ± 4.47** | — |
 
 Read with the caveats in [Comparability](#comparability-with-the-official-bglp-rules): both published systems score every official test point, while we score 94.9% (30 min) and 93.7% (60 min) of them, and, unlike Rubin-Falcone et al., we do not train or fine-tune per patient. Bevan & Coenen's system is the closest in kind, since it is also a single model shared across patients.
@@ -175,14 +175,14 @@ For context, **logging density** (events per day, from `results/data_quality.csv
 
 The LSTMs beat persistence on overall RMSE (Section 4.1), and their forecasts are calibrated in size and direction (below). But their point forecasts seldom fall below 70 mg/dL, so **they cannot flag lows at the standard threshold, and at 60 minutes they essentially never do.**
 
-**Hypoglycemia detection.** The event is an actual glucose below 70 mg/dL (844 scored readings at 30 min, 841 at 60 min). An alert is raised when the forecast is below the threshold in the second column. Each cell is sensitivity / precision (number of alerts): sensitivity is the share of actual lows that were alerted, precision the share of alerts that were actual lows. Pooled over all 12 patients; LSTMs are seed-averaged. For persistence the forecast is simply the last reading.
+**Hypoglycemia detection.** The event is an actual glucose below 70 mg/dL (844 scored readings at 30 min, 841 at 60 min). An alert is raised when the forecast is below the threshold in the second column. Each cell is sensitivity / precision (number of alerts): sensitivity is the share of actual lows that were alerted, precision the share of alerts that were actual lows; precision is undefined when no alerts are raised. Pooled over all 12 patients; LSTMs are seed-averaged. For persistence the forecast is simply the last reading.
 
 | Horizon | Alert if forecast is below | Persistence | Ridge | LSTM glucose | LSTM + insulin/carbs |
 |---|---|---|---|---|---|
 | 30 min | 70 mg/dL | 0.56 / 0.57 (830) | 0.38 / 0.61 (524) | 0.26 / 0.69 (318) | 0.31 / 0.73 (365) |
 | 30 min | 80 mg/dL | 0.78 / 0.37 (1,760) | 0.75 / 0.51 (1,240) | 0.75 / 0.53 (1,184) | 0.76 / 0.53 (1,225) |
 | 30 min | 90 mg/dL | 0.91 / 0.25 (3,019) | 0.93 / 0.32 (2,419) | 0.92 / 0.30 (2,578) | 0.92 / 0.30 (2,562) |
-| 60 min | 70 mg/dL | 0.34 / 0.35 (816) | 0.04 / 0.27 (134) | 0.00 / 0.00 (0) | 0.00 / 0.25 (5) |
+| 60 min | 70 mg/dL | 0.34 / 0.35 (816) | 0.04 / 0.27 (134) | 0.00 / — (0) | 0.00 / 0.25 (5) |
 | 60 min | 80 mg/dL | 0.51 / 0.25 (1,743) | 0.14 / 0.26 (448) | 0.01 / 0.36 (23) | 0.05 / 0.44 (107) |
 | 60 min | 90 mg/dL | 0.65 / 0.18 (2,982) | 0.46 / 0.32 (1,206) | 0.32 / 0.36 (741) | 0.41 / 0.36 (962) |
 
