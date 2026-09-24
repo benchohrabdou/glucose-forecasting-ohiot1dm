@@ -4,7 +4,7 @@ Forecast a Type 1 diabetes patient's continuous-glucose-monitor (CGM) reading **
 
 **Headline.** On the 2020 cohort (6 patients), a small LSTM trained on glucose plus insulin and carbohydrate history reaches 18.64 ± 2.55 mg/dL RMSE at 30 min and 32.40 ± 4.47 at 60 min (mean of per-patient RMSE), against 24.22 / 40.34 for persistence and 20.20 / 35.15 for ridge regression. The same LSTM on glucose alone reaches 19.26 / 33.83; over all 12 patients the two LSTMs reach 19.03 / 32.57 (glucose only) and 18.56 / 31.70 (with insulin/carbs). The main limitation is that the models' point forecasts **rarely fall below 70 mg/dL, so they cannot flag hypoglycemia at the standard threshold, and at 60 minutes they essentially never do** (see [Main limitation](#43-main-limitation-the-point-forecasts-rarely-cross-the-hypoglycemia-threshold)).
 
-**Intended use.** This is a candidate forecasting component for a diabetes-management app; it is a research prototype and has **not been clinically validated**.
+**Intended use.** This is a candidate forecasting component for a diabetes-management app; it is a research prototype and has **not been clinically validated**. A serving design for the [Diazen](https://github.com/benchohrabdou/Diazen-app) app is in [docs/deployment.md](docs/deployment.md).
 
 ---
 
@@ -300,6 +300,7 @@ src/models/   baselines.py, lstm.py
 src/          train.py, evaluate.py, run_seeds.py, analysis.py, plots.py, utils.py
 tests/        pytest suite (parsing, grid, leakage, rejection, aggregation, analysis)
 results/      metrics CSVs and aggregate figures (never raw data)
+docs/         deployment.md: serving design for the Diazen app (design only)
 ```
 
 ## 8. Citations
