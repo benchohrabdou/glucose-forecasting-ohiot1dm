@@ -1,0 +1,21 @@
+base: base.yaml
+
+window:
+  horizon: 12   # 60 min
+
+features:
+  insulin_carbs: true   # glucose + bolus, basal, carbs
+
+# Same LSTM body as lstm_ins_ph60.yaml; the head outputs the logit of P(glucose < 70 mg/dL).
+model:
+  type: lstm_classifier
+  hidden_size: 64
+  num_layers: 2
+  dropout: 0.2
+
+train:
+  lr: 0.001
+  batch_size: 256
+  max_epochs: 100
+  patience: 10       # early stopping on validation class-weighted BCE
+  grad_clip: 1.0

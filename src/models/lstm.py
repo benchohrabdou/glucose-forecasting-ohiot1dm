@@ -23,3 +23,35 @@ class LSTMForecaster(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         _, (h, _) = self.lstm(x)
         return self.head(self.drop(h[-1]))
+
+
+class QuantileLSTMForecaster(LSTMForecaster):
+    """Same LSTM body; the head predicts several quantiles of scaled glucose at the horizon.
+
+    Output (B, K), ordered like ``quantiles`` (ascending). Crossing is impossible by construction:
+    the head predicts the median directly and, for the other quantiles, non-negative gaps
+    (softplus) that are accumulated upward from the median for tau > 0.5 and downward for
+    tau < 0.5. Scaling to mg/dL is affine with a positive factor, so the order survives unscaling."""
+
+    def __init__(self, n_features: int, quantiles: list[float], hidden_size: int = 64, num_layers: int = 2,
+                 dropout: float = 0.2) -> None:
+        super().__init__(n_features, hidden_size, num_layers, dropout)
+        q = [float(t) for t in quantiles]
+        if q != sorted(q) or len(set(q)) != len(q) or 0.5 not in q:
+            raise ValueError("quantiles must be strictly increasing and include 0.5")
+        self.quantiles = q
+        self.median_index = q.index(0.5)
+        self.head = nn.Linear(hidden_size, len(q))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        raw = super().forward(x)
+        m = self.median_index
+        median = raw[:, m : m + 1]
+        gaps = nn.functional.softplus(raw)
+        up = median + torch.cumsum(gaps[:, m + 1 :], dim=1)
+        down = median - torch.cumsum(gaps[:, :m].flip(1), dim=1).flip(1)
+        return torch.cat([down, median, up], dim=1)
+
+
+class LSTMClassifier(LSTMForecaster):
+    """Same LSTM body; the head outputs one logit for P(glucose < 70 mg/dL at the horizon)."""
