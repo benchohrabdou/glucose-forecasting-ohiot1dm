@@ -2,7 +2,7 @@
 
 Forecast a Type 1 diabetes patient's continuous-glucose-monitor (CGM) reading **30 and 60 minutes ahead** from the last hour of CGM data plus insulin and carbohydrate history, using the OhioT1DM dataset. It reports the metric of the OhioT1DM Blood Glucose Level Prediction (BGLP) Challenge (RMSE in mg/dL, mean of per-patient RMSE) so results can be set beside the published literature, with two documented differences from the official protocol (see [Comparability](#comparability-with-the-official-bglp-rules)). The point of the repository is a **leak-free, reproducible evaluation protocol**; model sophistication is secondary.
 
-**Headline.** On the 2020 cohort (6 patients), a small LSTM trained on glucose plus insulin and carbohydrate history reaches 18.64 ± 2.55 mg/dL RMSE at 30 min and 32.40 ± 4.47 at 60 min (mean of per-patient RMSE), against 24.22 / 40.34 for persistence and 20.20 / 35.15 for ridge regression. The same LSTM on glucose alone reaches 19.26 / 33.83; over all 12 patients the two LSTMs reach 19.03 / 32.57 (glucose only) and 18.56 / 31.70 (with insulin/carbs). The main limitation is that the models' point forecasts **rarely fall below 70 mg/dL, so they cannot flag hypoglycemia at the standard threshold, and at 60 minutes they essentially never do** (see [Main limitation](#43-main-limitation-the-point-forecasts-rarely-cross-the-hypoglycemia-threshold)).
+**Headline.** On the 2020 cohort (6 patients), a small LSTM trained on glucose plus insulin and carbohydrate history reaches 18.64 ± 2.55 mg/dL RMSE at 30 min and 32.40 ± 4.47 at 60 min (mean of per-patient RMSE), against 24.22 / 40.34 for persistence and 20.20 / 35.15 for ridge regression. The same LSTM on glucose alone reaches 19.26 / 33.83; over all 12 patients the two LSTMs reach 19.03 / 32.57 (glucose only) and 18.56 / 31.70 (with insulin/carbs). The main limitation is that the models' point forecasts **rarely fall below 70 mg/dL, so they cannot flag hypoglycemia at the standard threshold, and at 60 minutes they essentially never do** (see [Main limitation](#43-main-limitation-the-point-forecasts-rarely-cross-the-hypoglycemia-threshold)). Choosing alert rules on validation data fixes most of this: quantile and classifier LSTMs detect lows at test F2 around 0.71 (30 min) and 0.51–0.54 (60 min), but a tuned threshold on the ordinary MSE LSTM does about as well at 30 minutes, so the probabilistic outputs help only modestly, at 60 minutes ([Section 4.4](#44-probabilistic-forecasts-for-hypoglycemia-alerting)).
 
 **Intended use.** This is a candidate forecasting component for a diabetes-management app; it is a research prototype and has **not been clinically validated**. A serving design for the [Diazen](https://github.com/benchohrabdou/Diazen-app) app is in [docs/deployment.md](docs/deployment.md).
 
@@ -75,7 +75,9 @@ python -m src.run_seeds --configs configs/lstm_ph30.yaml configs/lstm_ph60.yaml 
         configs/lstm_ins_ph30.yaml configs/lstm_ins_ph60.yaml --seeds 0 1 2 3 4
 python -m src.evaluate --config configs/base.yaml             # rebuild comparison tables
 python -m src.analysis --config configs/base.yaml             # range / lag / Clarke / figures
-python -m pytest                                              # 104 tests
+python -m src.probabilistic train --configs configs/lstm_q_ph30.yaml configs/lstm_q_ph60.yaml         configs/lstm_ins_q_ph30.yaml configs/lstm_ins_q_ph60.yaml configs/lstm_cls_ph30.yaml         configs/lstm_cls_ph60.yaml configs/lstm_ins_cls_ph30.yaml configs/lstm_ins_cls_ph60.yaml --seeds 0 1 2 3 4
+python -m src.probabilistic report --config configs/base.yaml # Section 4.4 tables and figures
+python -m pytest                                              # 121 tests
 ```
 
 Single runs: `python -m src.train --config configs/lstm_ph30.yaml --seed 0`, then `python -m src.evaluate --config configs/lstm_ph30.yaml --checkpoint checkpoints/lstm_ph30_seed0.pt`.
@@ -268,11 +270,122 @@ Zone assignment was cross-checked against an independent implementation (the `cl
 
 **Reading counts matter.** Hypoglycemic readings are about 3% of scored readings. In 5 of 12 patients' test files there are fewer than 30 of them (as few as 3), so patient-level hypoglycemia errors are very noisy and the pooled figures are dominated by a few patients (540, 567, 575, 591). Per-patient tables with counts: `results/error_by_range_per_patient.csv`.
 
+### 4.4 Probabilistic forecasts for hypoglycemia alerting
+
+Section 4.3 showed that a point forecast trained with MSE rarely falls below 70 mg/dL, so an alert "forecast below 70" misses most lows. This section tests the obvious fix, probabilistic outputs with an alert rule chosen on validation data, and gives the MSE models the same chance by tuning their alert thresholds too.
+
+**Protocol (fixed before any test result was computed).**
+
+- **Quantile LSTM.** The same LSTM (2 layers, hidden 64, dropout 0.2, Adam 1e-3, gradient clipping, patience 10), with a head that predicts the quantiles τ ∈ {0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95} of glucose at the horizon. It is trained with the pinball loss averaged over quantiles and early-stopped on validation mean pinball loss. The head predicts the median plus non-negative (softplus) gaps accumulated upward and downward, so quantiles cannot cross.
+- **Classifier LSTM** (the optional part, done). The same LSTM with one output, P(glucose < 70 at the horizon), trained with class-weighted binary cross-entropy (positive weight = negatives / positives in the training windows) and early-stopped on validation weighted BCE.
+- **Both input variants and both horizons, seeds 0–4**, on the identical windows as every other model. Each checkpoint's test windows pass the same hash check as the baselines.
+- **Alert rules, chosen on validation only:**
+  - quantile LSTM: alert when q<sub>τ</sub> < 70 mg/dL, with τ ∈ {0.05, 0.10, 0.25, 0.50};
+  - persistence and MSE LSTM: alert when the forecast < T, with T ∈ {70, 75, …, 110} mg/dL;
+  - classifier: alert when P(< 70) ≥ p, with p ∈ {0.01, 0.02, …, 0.99}.
+- **Selection criterion: F2** (the F-score that weights sensitivity four times as much as precision, appropriate for a safety alert), computed on validation windows pooled over all 12 patients and averaged over the five seeds. One rule per model and horizon; ties go to the rule with fewer validation alerts. The test files were then scored once.
+- **Validation lows are limited:** 736 validation readings below 70 at 30 min and 722 at 60 min. They come from all 12 patients, but 61–62% come from four (540, 567, 575, 559), so the chosen rules are shaped mostly by those patients.
+
+**Point accuracy: the quantile median costs nothing.** RMSE / MAE of the median (τ = 0.50) against the MSE LSTM, mean ± std across patients of seed-averaged per-patient values.
+
+2020 cohort:
+
+| Model | 30 min RMSE | 30 min MAE | 60 min RMSE | 60 min MAE |
+|---|---|---|---|---|
+| MSE LSTM, glucose only | 19.26 ± 2.50 | 13.80 ± 1.77 | 33.83 ± 4.57 | 25.32 ± 3.38 |
+| Quantile LSTM (median), glucose only | 19.25 ± 2.58 | 13.59 ± 1.84 | 33.97 ± 4.71 | 24.84 ± 3.57 |
+| MSE LSTM, glucose + insulin/carbs | 18.64 ± 2.55 | 13.38 ± 1.79 | 32.40 ± 4.47 | 24.21 ± 3.25 |
+| Quantile LSTM (median), glucose + insulin/carbs | 18.54 ± 2.60 | 13.13 ± 1.82 | 32.34 ± 4.40 | 23.63 ± 3.28 |
+
+All 12 patients:
+
+| Model | 30 min RMSE | 30 min MAE | 60 min RMSE | 60 min MAE |
+|---|---|---|---|---|
+| MSE LSTM, glucose only | 19.03 ± 2.11 | 13.47 ± 1.49 | 32.57 ± 3.65 | 24.21 ± 2.79 |
+| Quantile LSTM (median), glucose only | 19.05 ± 2.13 | 13.31 ± 1.48 | 32.74 ± 3.70 | 23.87 ± 2.75 |
+| MSE LSTM, glucose + insulin/carbs | 18.56 ± 2.18 | 13.13 ± 1.47 | 31.70 ± 3.47 | 23.50 ± 2.61 |
+| Quantile LSTM (median), glucose + insulin/carbs | 18.51 ± 2.21 | 12.95 ± 1.46 | 31.67 ± 3.39 | 23.02 ± 2.56 |
+
+The median matches the MSE LSTM's RMSE to within 0.17 mg/dL (glucose only) and 0.04 mg/dL (with insulin/carbs), and has slightly lower MAE, as expected for a median.
+
+**Calibration of the intervals** (test, pooled over all 12 patients, seed-averaged):
+
+| Horizon | Model | Actual range | Readings | 80% interval: coverage (mean width) | 90% interval: coverage (mean width) |
+|---|---|---|---|---|---|
+| 30 min | glucose only | all | 30,302 | 83.1% (45 mg/dL) | 91.8% (61 mg/dL) |
+| 30 min | glucose only | hypo (<70) | 844 | 73.6% (42 mg/dL) | 85.3% (58 mg/dL) |
+| 30 min | glucose only | in range (70–180) | 18,802 | 84.0% (41 mg/dL) | 92.8% (56 mg/dL) |
+| 30 min | glucose only | hyper (>180) | 10,656 | 82.3% (52 mg/dL) | 90.6% (70 mg/dL) |
+| 30 min | glucose + insulin/carbs | all | 30,302 | 83.1% (43 mg/dL) | 91.8% (59 mg/dL) |
+| 30 min | glucose + insulin/carbs | hypo (<70) | 844 | 76.6% (41 mg/dL) | 87.0% (55 mg/dL) |
+| 30 min | glucose + insulin/carbs | in range (70–180) | 18,802 | 83.9% (40 mg/dL) | 92.7% (54 mg/dL) |
+| 30 min | glucose + insulin/carbs | hyper (>180) | 10,656 | 82.2% (50 mg/dL) | 90.6% (66 mg/dL) |
+| 60 min | glucose only | all | 29,961 | 80.9% (77 mg/dL) | 90.6% (104 mg/dL) |
+| 60 min | glucose only | hypo (<70) | 841 | 41.5% (78 mg/dL) | 68.1% (102 mg/dL) |
+| 60 min | glucose only | in range (70–180) | 18,583 | 85.3% (73 mg/dL) | 94.0% (98 mg/dL) |
+| 60 min | glucose only | hyper (>180) | 10,537 | 76.2% (85 mg/dL) | 86.5% (114 mg/dL) |
+| 60 min | glucose + insulin/carbs | all | 29,961 | 80.9% (74 mg/dL) | 90.4% (99 mg/dL) |
+| 60 min | glucose + insulin/carbs | hypo (<70) | 841 | 45.4% (71 mg/dL) | 68.1% (94 mg/dL) |
+| 60 min | glucose + insulin/carbs | in range (70–180) | 18,583 | 84.5% (69 mg/dL) | 93.5% (92 mg/dL) |
+| 60 min | glucose + insulin/carbs | hyper (>180) | 10,537 | 77.4% (83 mg/dL) | 86.8% (111 mg/dL) |
+
+Overall, the intervals are close to nominal: the 80% interval covers 83.1% at 30 min and 80.9% at 60 min, the 90% interval 91.8% and 90.4–90.6%. They **under-cover in hypoglycemia**, mildly at 30 min (73.6–76.6% for the 80% interval) and badly at 60 min (41.5–45.4% for 80%, 68.1% for 90%). The selection-effect caution from Section 4.3 applies here too: coverage conditioned on the *actual* value is lower at the extremes even for a well-calibrated model, so this table shows where the intervals are too narrow, not by how much the model is miscalibrated overall.
+
+![Interval coverage by glycemic range](results/figures/quantile_coverage_by_range.png)
+
+**Hypoglycemia alerting on test**, each model with its validation-chosen rule. Pooled over all 12 patients; the LSTM rows are averaged over the five seeds (F2 ± its standard deviation across seeds). Actual lows: 844 at 30 min and 841 at 60 min.
+
+30 minutes:
+
+| Model | Rule chosen on validation | Per-seed choice on validation | Sensitivity | Precision | F2 (± seed sd) | Alerts |
+|---|---|---|---|---|---|---|
+| Persistence | forecast < 85 | — | 0.857 | 0.310 | 0.633 | 2,330 |
+| MSE LSTM, glucose only | forecast < 85 | 85.0, 85.0, 85.0, 85.0, 85.0 | 0.865 | 0.403 | 0.703 ± 0.011 | 1,821 |
+| MSE LSTM, glucose + insulin/carbs | forecast < 85 | 85.0, 85.0, 85.0, 80.0, 85.0 | 0.869 | 0.402 | 0.704 ± 0.007 | 1,837 |
+| Quantile LSTM, glucose only | q<sub>0.1</sub> < 70 | 0.25, 0.1, 0.25, 0.1, 0.1 | 0.928 | 0.365 | 0.709 ± 0.011 | 2,153 |
+| Quantile LSTM, glucose + insulin/carbs | q<sub>0.1</sub> < 70 | 0.1, 0.25, 0.1, 0.25, 0.25 | 0.933 | 0.361 | 0.708 ± 0.014 | 2,189 |
+| Classifier LSTM, glucose only | P(<70) ≥ 0.86 | 0.89, 0.88, 0.85, 0.86, 0.85 | 0.858 | 0.441 | 0.721 ± 0.008 | 1,643 |
+| Classifier LSTM, glucose + insulin/carbs | P(<70) ≥ 0.79 | 0.87, 0.79, 0.88, 0.76, 0.86 | 0.891 | 0.387 | 0.706 ± 0.006 | 1,949 |
+
+60 minutes:
+
+| Model | Rule chosen on validation | Per-seed choice on validation | Sensitivity | Precision | F2 (± seed sd) | Alerts |
+|---|---|---|---|---|---|---|
+| Persistence | forecast < 90 | — | 0.649 | 0.183 | 0.430 | 2,982 |
+| MSE LSTM, glucose only | forecast < 100 | 100.0, 100.0, 100.0, 100.0, 100.0 | 0.725 | 0.208 | 0.483 ± 0.013 | 2,956 |
+| MSE LSTM, glucose + insulin/carbs | forecast < 100 | 100.0, 100.0, 100.0, 105.0, 100.0 | 0.755 | 0.224 | 0.510 ± 0.026 | 2,878 |
+| Quantile LSTM, glucose only | q<sub>0.1</sub> < 70 | 0.1, 0.1, 0.1, 0.1, 0.1 | 0.775 | 0.233 | 0.528 ± 0.010 | 2,807 |
+| Quantile LSTM, glucose + insulin/carbs | q<sub>0.1</sub> < 70 | 0.1, 0.1, 0.1, 0.1, 0.1 | 0.780 | 0.239 | 0.536 ± 0.008 | 2,750 |
+| Classifier LSTM, glucose only | P(<70) ≥ 0.70 | 0.66, 0.77, 0.68, 0.7, 0.73 | 0.802 | 0.208 | 0.510 ± 0.009 | 3,253 |
+| Classifier LSTM, glucose + insulin/carbs | P(<70) ≥ 0.71 | 0.67, 0.66, 0.71, 0.72, 0.7 | 0.790 | 0.209 | 0.508 ± 0.007 | 3,177 |
+
+![Hypoglycemia alerting on test](results/figures/alerting_comparison.png)
+
+Threshold-free scores of the classifier (test, seed-averaged):
+
+| Horizon | Model | PR-AUC (± seed sd) | Prevalence of lows | Brier score | Brier of a constant forecast at the prevalence |
+|---|---|---|---|---|---|
+| 30 min | glucose only | 0.583 ± 0.017 | 2.8% | 0.0549 | 0.0271 |
+| 30 min | glucose + insulin/carbs | 0.581 ± 0.015 | 2.8% | 0.0553 | 0.0271 |
+| 60 min | glucose only | 0.272 ± 0.009 | 2.8% | 0.1027 | 0.0273 |
+| 60 min | glucose + insulin/carbs | 0.296 ± 0.005 | 2.8% | 0.1014 | 0.0273 |
+
+**What this shows.**
+
+- **Detecting lows is fixable, but mostly by choosing the alert threshold on validation, not by the probabilistic head.** Once each model's rule is tuned, sensitivity at 30 min rises from 0.26 (MSE LSTM, "forecast < 70", Section 4.3) to 0.86 for the same MSE LSTM with a validation-chosen threshold of 85 mg/dL. Persistence gains in the same way.
+- **At 30 minutes the trained models are indistinguishable.** Test F2 is 0.703–0.709 for the MSE, quantile and insulin/carbs classifier LSTMs, within about one seed standard deviation of one another (about 0.01). The glucose-only classifier is highest at 0.721, but the margin is about one seed standard deviation, so it is not a clear win. The quantile LSTM trades precision for sensitivity (0.93 against 0.86, precision 0.36 against 0.40). All trained models beat persistence (F2 0.633).
+- **At 60 minutes the quantile LSTM is best, by a small margin.** F2 is 0.528 / 0.536 (glucose only / with insulin/carbs) against 0.483 / 0.510 for the tuned MSE LSTM, 0.510 / 0.508 for the classifier and 0.430 for persistence. The gain over the tuned MSE LSTM is several seed standard deviations for the glucose-only variant but only about one for the insulin/carbs variant, whose MSE counterpart varies more across seeds.
+- **Precision stays low.** At 60 minutes every model raises roughly three to four alerts per actual low (precision about 0.2); at 30 minutes, roughly two to three (precision 0.3–0.44). A usable alert would need that false-alarm rate to be acceptable to users, which this project does not assess.
+- **The classifier's probabilities are not calibrated.** Its Brier score is worse than a constant forecast at the prevalence, because class weighting inflates the predicted probabilities. Its *ranking* is informative (PR-AUC 0.58 at 30 min and 0.27–0.30 at 60 min, against a prevalence of about 3%), which is all a thresholded alert needs; its probabilities should not be read as probabilities.
+- **The chosen rules are not fully stable.** At 30 min the quantile LSTM's validation F2 is nearly tied between τ = 0.10 and τ = 0.25 (0.684 against 0.679 for glucose only), and individual seeds pick either. The classifier thresholds vary across seeds by up to 0.12. At 60 min, every seed of both quantile models picks τ = 0.10.
+
+In short, the probabilistic head fixes the calibration story and costs no RMSE, but it does not deliver a clearly better alert than simply tuning the MSE model's threshold on validation, except modestly at 60 minutes.
+
 ## 5. Limitations
 
 - **Small sample.** 12 patients, about 10 test days each; hypoglycemic events are rare, especially in the test files.
 - **One configuration.** The LSTM was not tuned (hidden size 64 throughout), and a validation-only search was deliberately not run. Results may understate what the architecture can do.
-- **Alert thresholds are illustrative.** The detection table evaluates thresholds of 70, 80 and 90 mg/dL on the test files; none was tuned on validation data, and the hypoglycemic events are few and concentrated in a handful of patients.
+- **Alert rules rest on few, concentrated events.** Section 4.4's alert rules are chosen on validation data, but the validation set has only about 720–740 hypoglycemic readings, 61–62% of them from four patients, and some chosen rules differ between seeds. The Section 4.3 thresholds (70, 80, 90 mg/dL) remain illustrative. Alert precision is 0.18–0.44, and whether that false-alarm rate is acceptable was not assessed.
 - **Population model only.** No per-patient fine-tuning or personalisation was evaluated.
 - **Self-reported meals.** Carbohydrates are sparse and sometimes mis-timed; one test file (patient 567) has none. Insulin and carbs are not separated in the ablation.
 - **No wearable or life-event signals** (heart rate, sleep, exercise, stress).
@@ -283,7 +396,7 @@ Zone assignment was cross-checked against an independent implementation (the `cl
 
 ## 6. Future work
 
-- **Quantile or distributional outputs, and alert-threshold tuning.** A conditional mean rarely crosses 70, so alerting should use a quantity that does: for example a lower-quantile forecast or a predicted probability of glucose below 70, with the alert threshold chosen on validation data and then evaluated once on test.
+- **Better-calibrated low-glucose outputs.** Improve interval coverage in hypoglycemia at 60 minutes (Section 4.4), for example with conformal calibration on validation data, and recalibrate the classifier's probabilities (e.g. Platt scaling on validation) so they can be read as probabilities.
 - **Weighted or asymmetric loss, or oversampling of hypoglycemic windows.** This would push forecasts toward low values when low glucose is plausible, and would **trade overall RMSE for hypoglycemia sensitivity**; both should be reported. It would also test the conditional-mean explanation above.
 - Train **one model per patient** (optionally pre-trained on the 2018 cohort, or fine-tuning the population model per patient), which the official offline definition requires, and score every real reading from 60 minutes in, using extrapolation for windows near gaps, so results can be compared directly with published ones.
 - A small validation-only hyperparameter search (e.g. hidden size 64 vs 128) and a 120-minute input window.
@@ -294,10 +407,12 @@ Zone assignment was cross-checked against an independent implementation (the `cl
 ## 7. Repository layout
 
 ```
-configs/      base.yaml, lstm_ph{30,60}.yaml, lstm_ins_ph{30,60}.yaml
+configs/      base.yaml, lstm_ph{30,60}.yaml, lstm_ins_ph{30,60}.yaml,
+              lstm_q / lstm_ins_q / lstm_cls / lstm_ins_cls _ph{30,60}.yaml (Section 4.4)
 src/data/     parse.py, preprocess.py, dataset.py, explore.py
-src/models/   baselines.py, lstm.py
-src/          train.py, evaluate.py, run_seeds.py, analysis.py, plots.py, utils.py
+src/models/   baselines.py, lstm.py (MSE, quantile and classifier heads)
+src/          train.py, evaluate.py, run_seeds.py, analysis.py, plots.py, utils.py,
+              probabilistic.py, plots_prob.py (quantile / classifier LSTMs, Section 4.4)
 tests/        pytest suite (parsing, grid, leakage, rejection, aggregation, analysis)
 results/      metrics CSVs and aggregate figures (never raw data)
 docs/         deployment.md: serving design for the Diazen app (design only)
