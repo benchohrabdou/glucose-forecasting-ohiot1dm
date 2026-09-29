@@ -1,0 +1,5 @@
+horizon_min,model,n_seeds,n_test_lows,prevalence,pr_auc,pr_auc_seed_std,brier,brier_of_constant_prevalence
+30,classifier lstm (glucose only),5,844,0.0279,0.5827,0.0166,0.0549,0.0271
+30,classifier lstm (glucose + insulin/carbs),5,844,0.0279,0.5813,0.0146,0.0553,0.0271
+60,classifier lstm (glucose only),5,841,0.0281,0.2717,0.0092,0.1027,0.0273
+60,classifier lstm (glucose + insulin/carbs),5,841,0.0281,0.2956,0.0048,0.1014,0.0273

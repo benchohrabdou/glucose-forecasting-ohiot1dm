@@ -1,0 +1,97 @@
+model,horizon_min,patient,rmse,mae
+lstm (glucose only),30,540,21.4453,15.9409
+lstm (glucose only),30,544,17.9948,12.7166
+lstm (glucose only),30,552,16.151,11.9953
+lstm (glucose only),30,559,18.5399,12.8265
+lstm (glucose only),30,563,17.6161,12.61
+lstm (glucose only),30,567,21.1146,14.7053
+lstm (glucose only),30,570,16.3105,11.3255
+lstm (glucose only),30,575,21.2586,14.0242
+lstm (glucose only),30,584,21.8531,15.4367
+lstm (glucose only),30,588,18.4291,13.1722
+lstm (glucose only),30,591,20.6337,14.8606
+lstm (glucose only),30,596,17.0047,12.0224
+lstm (glucose + insulin/carbs),30,540,20.6039,15.3975
+lstm (glucose + insulin/carbs),30,544,17.1115,12.1764
+lstm (glucose + insulin/carbs),30,552,15.8113,11.8028
+lstm (glucose + insulin/carbs),30,559,18.2553,12.7062
+lstm (glucose + insulin/carbs),30,563,17.7434,12.5686
+lstm (glucose + insulin/carbs),30,567,20.4125,14.0561
+lstm (glucose + insulin/carbs),30,570,16.0504,11.2324
+lstm (glucose + insulin/carbs),30,575,21.163,13.575
+lstm (glucose + insulin/carbs),30,584,21.7097,15.3556
+lstm (glucose + insulin/carbs),30,588,17.1248,12.4962
+lstm (glucose + insulin/carbs),30,591,20.4902,14.7652
+lstm (glucose + insulin/carbs),30,596,16.217,11.4807
+quantile lstm (glucose only),30,540,21.4962,15.7305
+quantile lstm (glucose only),30,544,18.072,12.5018
+quantile lstm (glucose only),30,552,15.9817,11.6408
+quantile lstm (glucose only),30,559,18.5661,12.5992
+quantile lstm (glucose only),30,563,17.6356,12.5873
+quantile lstm (glucose only),30,567,21.0788,14.3567
+quantile lstm (glucose only),30,570,16.4259,11.427
+quantile lstm (glucose only),30,575,21.1586,13.6723
+quantile lstm (glucose only),30,584,21.9629,15.4972
+quantile lstm (glucose only),30,588,18.6147,13.1748
+quantile lstm (glucose only),30,591,20.661,14.6842
+quantile lstm (glucose only),30,596,16.9215,11.8031
+quantile lstm (glucose + insulin/carbs),30,540,20.5761,15.1644
+quantile lstm (glucose + insulin/carbs),30,544,17.014,11.9118
+quantile lstm (glucose + insulin/carbs),30,552,15.5277,11.4156
+quantile lstm (glucose + insulin/carbs),30,559,18.0065,12.3826
+quantile lstm (glucose + insulin/carbs),30,563,17.946,12.5997
+quantile lstm (glucose + insulin/carbs),30,567,20.3346,13.7027
+quantile lstm (glucose + insulin/carbs),30,570,15.993,11.2442
+quantile lstm (glucose + insulin/carbs),30,575,21.2116,13.2533
+quantile lstm (glucose + insulin/carbs),30,584,21.6263,15.2665
+quantile lstm (glucose + insulin/carbs),30,588,17.2248,12.4199
+quantile lstm (glucose + insulin/carbs),30,591,20.5312,14.6616
+quantile lstm (glucose + insulin/carbs),30,596,16.1698,11.3449
+lstm (glucose only),60,540,39.0274,29.9208
+lstm (glucose only),60,544,31.5384,23.7435
+lstm (glucose only),60,552,29.0443,22.2575
+lstm (glucose only),60,559,32.9603,23.912
+lstm (glucose only),60,563,28.4246,21.2362
+lstm (glucose only),60,567,37.4694,27.6984
+lstm (glucose only),60,570,29.1779,21.4031
+lstm (glucose only),60,575,33.7166,24.8886
+lstm (glucose only),60,584,37.108,26.929
+lstm (glucose only),60,588,30.9832,22.3279
+lstm (glucose only),60,591,32.5594,24.868
+lstm (glucose only),60,596,28.8046,21.3443
+lstm (glucose + insulin/carbs),60,540,38.0238,28.7822
+lstm (glucose + insulin/carbs),60,544,28.9209,21.9182
+lstm (glucose + insulin/carbs),60,552,28.5556,22.2896
+lstm (glucose + insulin/carbs),60,559,32.4946,23.8107
+lstm (glucose + insulin/carbs),60,563,29.3668,21.2921
+lstm (glucose + insulin/carbs),60,567,35.7564,26.2487
+lstm (glucose + insulin/carbs),60,570,28.5818,21.0119
+lstm (glucose + insulin/carbs),60,575,33.7593,24.2355
+lstm (glucose + insulin/carbs),60,584,35.3417,25.8643
+lstm (glucose + insulin/carbs),60,588,28.8404,21.3215
+lstm (glucose + insulin/carbs),60,591,32.9293,25.071
+lstm (glucose + insulin/carbs),60,596,27.7793,20.1838
+quantile lstm (glucose only),60,540,39.1249,29.5208
+quantile lstm (glucose only),60,544,31.9319,23.1894
+quantile lstm (glucose only),60,552,28.9239,21.3525
+quantile lstm (glucose only),60,559,32.9229,23.4245
+quantile lstm (glucose only),60,563,28.7929,21.5038
+quantile lstm (glucose only),60,567,37.5718,27.0884
+quantile lstm (glucose only),60,570,29.1775,21.3412
+quantile lstm (glucose only),60,575,33.7668,24.0682
+quantile lstm (glucose only),60,584,37.6218,27.1087
+quantile lstm (glucose only),60,588,31.8218,22.6816
+quantile lstm (glucose only),60,591,32.5965,24.4549
+quantile lstm (glucose only),60,596,28.6226,20.7524
+quantile lstm (glucose + insulin/carbs),60,540,37.7379,28.2466
+quantile lstm (glucose + insulin/carbs),60,544,29.2116,21.3442
+quantile lstm (glucose + insulin/carbs),60,552,28.3444,21.2929
+quantile lstm (glucose + insulin/carbs),60,559,32.0065,23.3103
+quantile lstm (glucose + insulin/carbs),60,563,30.0781,21.5796
+quantile lstm (glucose + insulin/carbs),60,567,35.9418,25.6801
+quantile lstm (glucose + insulin/carbs),60,570,28.0329,20.1854
+quantile lstm (glucose + insulin/carbs),60,575,33.4408,23.3628
+quantile lstm (glucose + insulin/carbs),60,584,35.0959,25.426
+quantile lstm (glucose + insulin/carbs),60,588,29.2599,21.3577
+quantile lstm (glucose + insulin/carbs),60,591,33.1046,24.6431
+quantile lstm (glucose + insulin/carbs),60,596,27.7385,19.8194

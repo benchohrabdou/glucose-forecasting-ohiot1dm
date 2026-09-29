@@ -1,0 +1,25 @@
+cohort,model,horizon_min,n_patients,rmse_mean,rmse_std,mae_mean,mae_std
+all,lstm (glucose only),30,12,19.0293,2.1137,13.4697,1.4899
+all,lstm (glucose + insulin/carbs),30,12,18.5577,2.1803,13.1344,1.4682
+all,quantile lstm (glucose only),30,12,19.0479,2.1285,13.3062,1.4789
+all,quantile lstm (glucose + insulin/carbs),30,12,18.5135,2.2128,12.9473,1.4617
+all,lstm (glucose only),60,12,32.5678,3.6512,24.2108,2.7906
+all,lstm (glucose + insulin/carbs),60,12,31.6958,3.4696,23.5025,2.6099
+all,quantile lstm (glucose only),60,12,32.7396,3.6969,23.8739,2.7516
+all,quantile lstm (glucose + insulin/carbs),60,12,31.6661,3.3877,23.0207,2.5571
+2020,lstm (glucose only),30,6,19.2606,2.5017,13.8029,1.7704
+2020,lstm (glucose + insulin/carbs),30,6,18.6443,2.5546,13.3782,1.7874
+2020,quantile lstm (glucose only),30,6,19.2522,2.5784,13.5883,1.843
+2020,quantile lstm (glucose + insulin/carbs),30,6,18.5414,2.6043,13.1343,1.8243
+2020,lstm (glucose only),60,6,33.832,4.5698,25.3156,3.3789
+2020,lstm (glucose + insulin/carbs),60,6,32.3963,4.4672,24.2145,3.2542
+2020,quantile lstm (glucose only),60,6,33.9662,4.7137,24.8354,3.5695
+2020,quantile lstm (glucose + insulin/carbs),60,6,32.345,4.3962,23.6349,3.2848
+2018,lstm (glucose only),30,6,18.798,1.8553,13.1365,1.2178
+2018,lstm (glucose + insulin/carbs),30,6,18.4712,1.9785,12.8906,1.1853
+2018,quantile lstm (glucose only),30,6,18.8437,1.7942,13.0241,1.1064
+2018,quantile lstm (glucose + insulin/carbs),30,6,18.4855,1.9969,12.7602,1.1349
+2018,lstm (glucose only),60,6,31.3037,2.1473,23.106,1.6693
+2018,lstm (glucose + insulin/carbs),60,6,30.9954,2.3129,22.7904,1.783
+2018,quantile lstm (glucose only),60,6,31.5131,2.0586,22.9123,1.3026
+2018,quantile lstm (glucose + insulin/carbs),60,6,30.9871,2.1945,22.4065,1.6402

@@ -1,0 +1,33 @@
+horizon_min,model,range,interval,nominal,n_readings,coverage,coverage_seed_std,mean_width_mgdl
+30,quantile lstm (glucose only),all,80%,0.8,30302,0.8311,0.0031,44.7984
+30,quantile lstm (glucose only),all,90%,0.9,30302,0.9181,0.0022,61.0276
+30,quantile lstm (glucose only),hypo (<70),80%,0.8,844,0.7355,0.0273,41.9566
+30,quantile lstm (glucose only),hypo (<70),90%,0.9,844,0.8533,0.0204,57.6618
+30,quantile lstm (glucose only),in range (70-180),80%,0.8,18802,0.8401,0.0039,40.8552
+30,quantile lstm (glucose only),in range (70-180),90%,0.9,18802,0.9277,0.0028,56.0816
+30,quantile lstm (glucose only),hyper (>180),80%,0.8,10656,0.8228,0.0088,51.981
+30,quantile lstm (glucose only),hyper (>180),90%,0.9,10656,0.9062,0.0045,70.0211
+30,quantile lstm (glucose + insulin/carbs),all,80%,0.8,30302,0.8309,0.0045,43.4619
+30,quantile lstm (glucose + insulin/carbs),all,90%,0.9,30302,0.918,0.0024,58.5863
+30,quantile lstm (glucose + insulin/carbs),hypo (<70),80%,0.8,844,0.7664,0.0568,40.5138
+30,quantile lstm (glucose + insulin/carbs),hypo (<70),90%,0.9,844,0.8701,0.0253,55.3995
+30,quantile lstm (glucose + insulin/carbs),in range (70-180),80%,0.8,18802,0.8391,0.0063,39.9973
+30,quantile lstm (glucose + insulin/carbs),in range (70-180),90%,0.9,18802,0.9272,0.0037,54.2537
+30,quantile lstm (glucose + insulin/carbs),hyper (>180),80%,0.8,10656,0.8216,0.0065,49.8084
+30,quantile lstm (glucose + insulin/carbs),hyper (>180),90%,0.9,10656,0.9057,0.004,66.4832
+60,quantile lstm (glucose only),all,80%,0.8,29961,0.809,0.0072,77.4544
+60,quantile lstm (glucose only),all,90%,0.9,29961,0.9065,0.0036,103.8243
+60,quantile lstm (glucose only),hypo (<70),80%,0.8,841,0.4147,0.0818,77.703
+60,quantile lstm (glucose only),hypo (<70),90%,0.9,841,0.6809,0.0477,102.3513
+60,quantile lstm (glucose only),in range (70-180),80%,0.8,18583,0.8534,0.0054,73.1076
+60,quantile lstm (glucose only),in range (70-180),90%,0.9,18583,0.94,0.0023,98.3851
+60,quantile lstm (glucose only),hyper (>180),80%,0.8,10537,0.7622,0.0093,85.1006
+60,quantile lstm (glucose only),hyper (>180),90%,0.9,10537,0.8653,0.0052,113.5344
+60,quantile lstm (glucose + insulin/carbs),all,80%,0.8,29961,0.8086,0.0038,74.2253
+60,quantile lstm (glucose + insulin/carbs),all,90%,0.9,29961,0.9039,0.0032,98.7991
+60,quantile lstm (glucose + insulin/carbs),hypo (<70),80%,0.8,841,0.4542,0.0626,70.6425
+60,quantile lstm (glucose + insulin/carbs),hypo (<70),90%,0.9,841,0.6806,0.033,93.9874
+60,quantile lstm (glucose + insulin/carbs),in range (70-180),80%,0.8,18583,0.8445,0.0025,69.1444
+60,quantile lstm (glucose + insulin/carbs),in range (70-180),90%,0.9,18583,0.9345,0.0021,92.3479
+60,quantile lstm (glucose + insulin/carbs),hyper (>180),80%,0.8,10537,0.7736,0.0131,83.4719
+60,quantile lstm (glucose + insulin/carbs),hyper (>180),90%,0.9,10537,0.8677,0.0079,110.5602
